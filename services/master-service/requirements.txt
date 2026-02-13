@@ -1,0 +1,6 @@
+# Master Service Dependencies
+-r ../../requirements.txt
+
+
+
+

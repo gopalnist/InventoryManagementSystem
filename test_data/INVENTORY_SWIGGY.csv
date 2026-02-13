@@ -1,0 +1,153 @@
+StorageType,FacilityName,City,SkuCode,SkuDescription,L1,L2,ShelfLifeDays,BusinessCategory,DaysOnHand,PotentialGmvLoss,OpenPos,OpenPoQuantity,WarehouseQtyAvailable
+,HYD IM2,HYDERABAD,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,12
+,HYD IM1,HYDERABAD,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,11
+,MUM IM3,MUMBAI,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,1
+,MUM IM1,MUMBAI,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,112
+,MUM FC22,MUMBAI,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,145
+,PUNE IM2 TEMP,PUNE,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,85
+,PUN DELHIVERY,PUNE,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,81
+,DLHY GGNFC5,GURGAON,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,55
+,DLHY GGNFC9,DELHI,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,162
+,KOLKATA ECOM,KOLKATA,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,70
+,KOL IM2,KOLKATA,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,14
+,BLR IM1,BANGALORE,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,53
+,BLR ECOM2,BANGALORE,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,333
+,VIZ IM1,VIZAG,126466,Nourish You Topaz Glow 375.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,1
+Ambient,HYD IM2,HYDERABAD,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,10,9975,"[CHCPO318778"",""CHCPO314486]",80,31
+Ambient,HYD IM1,HYDERABAD,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,5,6683.25,"[CHMPO265562"",""CHMPO266777]",40,11
+Ambient,MUM IM3,MUMBAI,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,365,0,[CI3PO36558],40,5
+Ambient,MUM IM1,MUMBAI,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,25,133,[],0,1
+Ambient,MUM FC22,MUMBAI,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,9,1429.75,[],0,4
+Ambient,PUNE IM2 TEMP,PUNE,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,365,0,[],0,0
+Ambient,PUN DELHIVERY,PUNE,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,22,3857,[CPDPO240858],60,26
+Ambient,DLHY GGNFC5,GURGAON,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,7,2726.5,[FC5PO354689],20,6
+Ambient,GOA IM1,CENTRAL GOA,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,0,1197,[],0,0
+Ambient,DLHY GGNFC9,DELHI,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,2,1463,[GGNPO326391],40,1
+Ambient,CBE IM1 TEMP,COIMBATORE,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,365,0,[],0,3
+Ambient,CHE AMB IM2,CHENNAI,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,365,0,[],0,31
+Ambient,KOLKATA ECOM,KOLKATA,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,0,1995,[],0,0
+Ambient,KOL IM2,KOLKATA,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,365,0,[KWBPO64429],40,0
+Ambient,BLR IM1,BANGALORE,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,0,133,[],0,0
+Ambient,CHD ECOM,CHANDIGARH,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,0,1197,[],0,0
+Ambient,CHD_IM2,CHANDIGARH,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,365,0,[],0,0
+Ambient,VIZ IM1,VIZAG,342284,Nourish You Watermelon Seeds 250.0 g,"Masala, Pickle and Papad",Whole Spices,273,Cooking Essentials,43,4588.5,[VIAPO43295],60,60
+,AHM DELHIVERY,AHMEDABAD,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Non Food,365,0,[],0,0
+Ambient,HYD IM2,HYDERABAD,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,11,299.25,[],0,5
+Ambient,HYD IM1,HYDERABAD,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,660,33.25,[],0,33
+Ambient,MUM IM3,MUMBAI,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,365,0,[],0,0
+Ambient,MUM FC22,MUMBAI,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,11,119.7,[],0,2
+Ambient,PUNE IM2 TEMP,PUNE,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,365,0,[],0,2
+Ambient,PUN DELHIVERY,PUNE,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,3,412.3,[CPDPO240858],40,2
+Ambient,NOI IM1,NOIDA,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,80,199.5,[],0,24
+Ambient,DLHY GGNFC5,GURGAON,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,58,79.8,[],0,7
+Ambient,GOA IM1,CENTRAL GOA,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,99,93.1,[],0,14
+Ambient,DLHY GGNFC9,DELHI,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,8,152.95,[],0,2
+Ambient,CHN ECOM,CHENNAI,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,9,146.3,[],0,2
+Ambient,CBE IM1 TEMP,COIMBATORE,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,365,0,[],0,2
+Ambient,CHE AMB IM2,CHENNAI,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,365,0,[],0,1
+Ambient,JAI IM1,JAIPUR,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,65,152.95,[],0,15
+Ambient,KOLKATA ECOM,KOLKATA,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,0,285.95,[],0,0
+Ambient,KOL IM2,KOLKATA,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,365,0,[KWBPO64429],40,0
+Ambient,BLR IM1,BANGALORE,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,0,26.6,[],0,0
+Ambient,VIZ IM1,VIZAG,469959,Nourish You Flax Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,365,Cooking Essentials,12,1077.3,[],0,21
+Ambient,AHM DELHIVERY,AHMEDABAD,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,1608.67,[CADPO183363],60,0
+Ambient,HYD IM2,HYDERABAD,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,18,36309.98,"[CHCPO318778"",""CHCPO317458]",130,207
+Ambient,HYD IM1,HYDERABAD,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,15,23243.64,"[CHMPO266246"",""CHMPO265562]",148,113
+Ambient,MUM IM3,MUMBAI,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[CI3PO36558],80,0
+Ambient,MUM FC22,MUMBAI,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,6533.17,[],0,0
+Ambient,PUNE IM2 TEMP,PUNE,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,2
+Ambient,PUN DELHIVERY,PUNE,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,4432.05,[CPDPO240858],80,0
+Ambient,NOI IM1,NOIDA,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,6007.89,[],0,0
+Ambient,DLHY GGNFC5,GURGAON,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,5712.42,[FC5PO354689],40,1
+Ambient,GOA IM1,CENTRAL GOA,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,3527.93,[],0,0
+Ambient,DLHY GGNFC9,DELHI,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,8699.95,[GGNPO326391],100,0
+Ambient,CBE IM1 TEMP,COIMBATORE,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,4
+Ambient,CHE AMB IM2,CHENNAI,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,0
+Ambient,JAI IM1,JAIPUR,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,4136.58,[],0,0
+Ambient,KOC IM1,KOCHI,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,908.18,[],0,0
+Ambient,KOLKATA ECOM,KOLKATA,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,12376.91,[],0,0
+Ambient,KOL IM2,KOLKATA,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[KWBPO64429],140,4
+Ambient,BLR IM1,BANGALORE,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,5763.45,[],0,0
+,BLR DHL,BANGALORE_2,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Non Food,0,1467.06,[],0,0
+Ambient,BLR ECOM2,BANGALORE,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,1,3388.21,[],0,1
+Ambient,VIZ IM1,VIZAG,481878,Nourish You Pumpkin Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,15,12508.23,"[VIAPO43295"",""VIAPO41814]",100,60
+,HYD IM2,HYDERABAD,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,6
+,HYD IM1,HYDERABAD,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,7
+,MUM IM1,MUMBAI,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,114
+,MUM FC22,MUMBAI,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,130
+,PUNE IM2 TEMP,PUNE,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,101
+,PUN DELHIVERY,PUNE,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,68
+,DLHY GGNFC5,GURGAON,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,43
+,DLHY GGNFC9,DELHI,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,132
+,KOLKATA ECOM,KOLKATA,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,134
+,KOL IM2,KOLKATA,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,17
+,BLR IM1,BANGALORE,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,187
+,BLR ECOM2,BANGALORE,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,230
+,VIZ IM1,VIZAG,492859,Nourish You Sapphire Jharoka Box 150.0 g,Munchies And Snacks,Namkeens and Sweets Gift Box Packs,182,Non Food,365,0,[],0,1
+Ambient,HYD IM2,HYDERABAD,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,7,2812.95,[CHCPO318778],80,12
+Ambient,HYD IM1,HYDERABAD,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,9,1200.85,[],0,7
+Ambient,MUM IM3,MUMBAI,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[CI3PO36558],20,1
+Ambient,MUM FC22,MUMBAI,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,35,509.95,[],0,11
+Ambient,PUNE IM2 TEMP,PUNE,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,2
+Ambient,PUN DELHIVERY,PUNE,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,1167.95,[CPDPO240858],60,0
+Ambient,NOI IM1,NOIDA,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,1700,82.25,[],0,85
+Ambient,DLHY GGNFC5,GURGAON,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,6,756.7,[],0,3
+Ambient,GOA IM1,CENTRAL GOA,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,6,773.15,[],0,3
+Ambient,DLHY GGNFC9,DELHI,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,14,460.6,[GGNPO326391],40,4
+Ambient,CHN ECOM,CHENNAI,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,5,296.1,[],0,1
+Ambient,CBE IM1 TEMP,COIMBATORE,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,3
+Ambient,CHE AMB IM2,CHENNAI,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,32
+Ambient,JAI IM1,JAIPUR,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,28,230.3,[],0,4
+Ambient,KOLKATA ECOM,KOLKATA,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,164.5,[],0,0
+Ambient,KOL IM2,KOLKATA,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,0
+Ambient,LKO IM1,LUCKNOW,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,526.4,[],0,0
+Ambient,LKO IM3,LUCKNOW,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,365,0,[],0,28
+Ambient,BLR IM1,BANGALORE,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,0,542.85,[],0,0
+Ambient,BLR ECOM2,BANGALORE,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,25,131.6,[],0,2
+Ambient,VIZ IM1,VIZAG,809404,Nourish You Sunflower Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,273,Cooking Essentials,26,1677.9,[VIAPO43295],20,27
+Ambient,AHM DELHIVERY,AHMEDABAD,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,0,2366.91,[CADPO183363],60,0
+Ambient,HYD IM2,HYDERABAD,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,5,19562.41,"[CHCPO318778"",""CHCPO317458"",""CHCPO314486]",272,57
+Ambient,HYD IM1,HYDERABAD,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,16,14221.69,"[CHMPO266246"",""CHMPO265562]",170,119
+Ambient,MUM IM3,MUMBAI,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[CI3PO36558],100,0
+Ambient,MUM IM1,MUMBAI,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,0,2569.21,[],0,0
+Ambient,MUM FC22,MUMBAI,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,0,5381.18,[],0,0
+Ambient,PUNE IM2 TEMP,PUNE,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[],0,0
+Ambient,PUN DELHIVERY,PUNE,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,5,1598.17,[CPDPO240858],20,4
+Ambient,NOI IM1,NOIDA,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,65,3317.72,[],0,108
+Ambient,AMD IM3,AHMEDABAD,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[],0,4
+Ambient,DLHY GGNFC5,GURGAON,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,2,4673.13,[],0,5
+Ambient,GOA IM1,CENTRAL GOA,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,29,950.81,[],0,14
+Ambient,GAU IM1,GUWAHATI,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,0,0,[],0,0
+Ambient,CHN ECOM,CHENNAI,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,14,2670.36,[],0,19
+Ambient,CBE IM1 TEMP,COIMBATORE,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[],0,3
+Ambient,CHE AMB IM2,CHENNAI,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[],0,120
+Ambient,JAI IM1,JAIPUR,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,17,788.97,[],0,7
+Ambient,KOLKATA ECOM,KOLKATA,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,1,1780.24,[],0,1
+Ambient,KOL IM2,KOLKATA,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[KWBPO64429],80,3
+Ambient,BLR IM1,BANGALORE,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,0,1881.39,[],0,0
+,BLR DHL,BANGALORE_2,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Non Food,0,80.92,[],0,0
+Ambient,BLR ECOM2,BANGALORE,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,37,161.84,[],0,3
+Ambient,CHD ECOM,CHANDIGARH,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,0,1294.72,[],0,0
+Ambient,CHD_IM2,CHANDIGARH,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[],0,0
+Ambient,CHD IMFC2_TEMP,CHANDIGARH,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,365,0,[],0,0
+Ambient,VIZ IM1,VIZAG,908009,Nourish You Quinoa 500.0 g,"Atta, Rice and Dals",Whole Grains and Cereals,365,Cooking Essentials,19,8880.97,[VIAPO43295],40,84
+Ambient,AHM DELHIVERY,AHMEDABAD,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,817.95,[],0,0
+Ambient,HYD IM2,HYDERABAD,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,17,6763.05,[CHCPO318778],60,59
+Ambient,HYD IM1,HYDERABAD,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,8,4448.85,[CHMPO265562],40,20
+Ambient,MUM IM3,MUMBAI,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,365,0,[],0,0
+Ambient,MUM FC22,MUMBAI,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,738.15,[],0,0
+Ambient,PUN DELHIVERY,PUNE,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,775,239.4,[],0,93
+Ambient,NOI IM1,NOIDA,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,1476.3,[],0,0
+Ambient,AMD IM3,AHMEDABAD,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,365,0,[],0,0
+Ambient,DLHY GGNFC5,GURGAON,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,2,977.55,[],0,1
+Ambient,GOA IM1,CENTRAL GOA,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,3012.45,[],0,0
+Ambient,DLHY GGNFC9,DELHI,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,105,1117.2,[],0,59
+Ambient,CHN ECOM,CHENNAI,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,1516.2,[],0,0
+Ambient,CHE AMB IM2,CHENNAI,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,365,0,[],0,1
+Ambient,JAI IM1,JAIPUR,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,28,498.75,[],0,7
+Ambient,LKO IM1,LUCKNOW,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,550,119.7,[],0,33
+Ambient,LKO IM3,LUCKNOW,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,365,0,[],0,0
+Ambient,BLR IM1,BANGALORE,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,1,3012.45,[],0,2
+Ambient,BLR ECOM2,BANGALORE,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,2394,[],0,0
+Ambient,CHD ECOM,CHANDIGARH,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,0,99.75,[],0,0
+Ambient,VIZ IM1,VIZAG,949802,Nourish You Chia Seeds 250.0 g,Dry Fruits and Nuts,Makhana and Seeds,730,Cooking Essentials,24,3910.2,[],0,48
