@@ -2,8 +2,9 @@ version: '3.8'
 
 services:
   # =============================================================================
-  # DATABASE
+  # DATABASES
   # =============================================================================
+  # IMS / Master: products, parties, categories, etc.
   postgres:
     image: postgres:16-alpine
     container_name: ims-postgres
@@ -16,10 +17,29 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Mount init scripts
       - ./services/master-service/app/db/schemas:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ims_user -d ims_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Reports: Main Dashboard, sales/inventory/PO/ads/traffic reports (report-service)
+  postgres-reports:
+    image: postgres:16-alpine
+    container_name: ims-postgres-reports
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: ams_db
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres_reports_data:/var/lib/postgresql/data
+      - ./scripts/setup_reports_db.sql:/docker-entrypoint-initdb.d/01_setup_reports.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ams_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,6 +59,7 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+      - postgres-reports
     profiles:
       - tools  # Only start with: docker compose --profile tools up
 
@@ -47,8 +68,8 @@ services:
   # =============================================================================
   master-service:
     build:
-      context: ./services/master-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/master-service/Dockerfile
     container_name: ims-master-service
     restart: unless-stopped
     environment:
@@ -73,6 +94,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  postgres_reports_data:
     driver: local
 
 networks:
