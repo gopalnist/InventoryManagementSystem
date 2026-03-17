@@ -25,7 +25,7 @@ services:
       POSTGRES_PASSWORD: ims_password
       POSTGRES_DB: ims_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/master-service/app/db/schemas:/docker-entrypoint-initdb.d:ro
@@ -67,7 +67,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "5050:80"
+      - "5150:80"
     depends_on:
       - postgres
       - postgres-reports
