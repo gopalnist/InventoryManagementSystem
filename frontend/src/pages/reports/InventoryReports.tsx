@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Warehouse, Package, TrendingDown, DollarSign, Box, Upload, MapPin, BarChart3, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
 import { Table, type Column } from '../../components/ui/Table';
 import { Drawer } from '../../components/ui/Drawer';
@@ -12,15 +13,17 @@ import {
 
 export function InventoryReports() {
   const { currentTheme, addNotification } = useAppStore();
+  const tenantId = useAuthStore((s) => s.tenantId)!;
   const [dateRange, setDateRange] = useState('30d');
-  const [inventoryData, setInventoryData] = useState<InventoryReportRow[]>([]);
+  const [inventoryData, setInventoryData] = useState<InventoryReportRow[]>([]); // Paginated data for table
+  const [allInventoryData, setAllInventoryData] = useState<InventoryReportRow[]>([]); // All data for analytics
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
-
-  // Default tenant ID
-  const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 50;
 
   // Calculate date range - Use local date format to avoid timezone issues
   const formatLocalDate = (date: Date) => {
@@ -62,39 +65,61 @@ export function InventoryReports() {
     setLoading(true);
     try {
       const { start, end } = getDateRange();
-      const [data, summaryData] = await Promise.all([
+      const offset = (currentPage - 1) * recordsPerPage;
+      
+      const [paginatedData, allData, summaryData] = await Promise.all([
+        // Fetch paginated data for table
         reportsApi.getInventoryReports(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
-          end
+          end,
+          recordsPerPage,
+          offset
         ),
+        // Fetch all data for analytics (max 10000 records)
+        reportsApi.getInventoryReports(
+          tenantId,
+          selectedChannel || undefined,
+          start,
+          end,
+          10000,
+          0
+        ),
+        // Fetch summary
         reportsApi.getInventorySummary(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
           end
         ),
       ]);
-      setInventoryData(data);
+      setInventoryData(paginatedData);
+      setAllInventoryData(allData);
       setSummary(summaryData);
+      setTotalRecords(summaryData?.total_records || paginatedData.length);
     } catch (error: any) {
       console.error('Failed to load inventory data:', error);
       addNotification('error', error.response?.data?.detail || 'Failed to load inventory data');
     } finally {
       setLoading(false);
     }
-  }, [dateRange, selectedChannel, getDateRange, addNotification]);
+  }, [dateRange, selectedChannel, currentPage, getDateRange, addNotification]);
 
   useEffect(() => {
     loadInventoryData();
   }, [loadInventoryData]);
 
   const handleUploadComplete = () => {
-    // Reload data after upload
+    // Reload data after upload (drawer stays open so user can see success/error and failed rows)
+    setCurrentPage(1);
     loadInventoryData();
-    setIsUploadDrawerOpen(false);
   };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRange, selectedChannel]);
 
   // Chart colors
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -106,7 +131,7 @@ export function InventoryReports() {
   // 1. Stock Distribution by Channel
   const stockByChannel = useMemo(() => {
     const channelMap = new Map<string, number>();
-    inventoryData.forEach(item => {
+    allInventoryData.forEach(item => {
       const channel = item.channel || 'Unknown';
       const qty = item.inventory || 0;
       channelMap.set(channel, (channelMap.get(channel) || 0) + qty);
@@ -114,12 +139,12 @@ export function InventoryReports() {
     return Array.from(channelMap.entries())
       .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
       .sort((a, b) => b.value - a.value);
-  }, [inventoryData]);
+  }, [allInventoryData]);
 
   // 2. Stock by City (Top 10)
   const stockByCity = useMemo(() => {
     const cityMap = new Map<string, number>();
-    inventoryData.forEach(item => {
+    allInventoryData.forEach(item => {
       const city = item.city || 'Unknown';
       const qty = item.inventory || 0;
       cityMap.set(city, (cityMap.get(city) || 0) + qty);
@@ -128,12 +153,12 @@ export function InventoryReports() {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [inventoryData]);
+  }, [allInventoryData]);
 
   // 3. Inventory Trend (by date)
   const inventoryTrend = useMemo(() => {
     const dateMap = new Map<string, number>();
-    inventoryData.forEach(item => {
+    allInventoryData.forEach(item => {
       if (item.date) {
         const dateKey = item.date.split('T')[0];
         const qty = item.inventory || 0;
@@ -143,12 +168,12 @@ export function InventoryReports() {
     return Array.from(dateMap.entries())
       .map(([date, inventory]) => ({ date, inventory }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [inventoryData]);
+  }, [allInventoryData]);
 
   // 4. Top Products by Stock
   const topProductsByStock = useMemo(() => {
     const productMap = new Map<string, { name: string; stock: number }>();
-    inventoryData.forEach(item => {
+    allInventoryData.forEach(item => {
       const sku = item.sku || 'Unknown';
       const name = item.product_name || sku;
       const qty = item.inventory || 0;
@@ -163,12 +188,12 @@ export function InventoryReports() {
       .map(([sku, data]) => ({ sku, name: data.name, stock: data.stock }))
       .sort((a, b) => b.stock - a.stock)
       .slice(0, 10);
-  }, [inventoryData]);
+  }, [allInventoryData]);
 
   // 5. Low Stock Products (bottom 10)
   const lowStockProducts = useMemo(() => {
     const productMap = new Map<string, { name: string; stock: number; city: string }>();
-    inventoryData.forEach(item => {
+    allInventoryData.forEach(item => {
       const key = `${item.sku}-${item.city}`;
       const qty = item.inventory || 0;
       if (!productMap.has(key) || qty < (productMap.get(key)?.stock || Infinity)) {
@@ -183,11 +208,11 @@ export function InventoryReports() {
       .filter(p => p.stock <= 10) // Low stock threshold
       .sort((a, b) => a.stock - b.stock)
       .slice(0, 10);
-  }, [inventoryData]);
+  }, [allInventoryData]);
 
   // 6. Stock Concentration (top 5 cities percentage)
   const stockConcentration = useMemo(() => {
-    const totalStock = inventoryData.reduce((sum, item) => sum + (item.inventory || 0), 0);
+    const totalStock = allInventoryData.reduce((sum, item) => sum + (item.inventory || 0), 0);
     const top5Stock = stockByCity.slice(0, 5).reduce((sum, city) => sum + city.value, 0);
     const otherStock = totalStock - top5Stock;
     
@@ -213,7 +238,7 @@ export function InventoryReports() {
     const matrix = new Map<string, Map<string, number>>();
     const channels = new Set<string>();
     
-    inventoryData.forEach(item => {
+    allInventoryData.forEach(item => {
       const city = item.city || 'Unknown';
       const channel = item.channel || 'Unknown';
       const qty = item.inventory || 0;
@@ -244,11 +269,11 @@ export function InventoryReports() {
       });
       return row;
     });
-  }, [inventoryData]);
+  }, [allInventoryData]);
 
   // 8. Stock Health Metrics
   const stockHealthMetrics = useMemo(() => {
-    const totalStock = inventoryData.reduce((sum, item) => sum + (item.inventory || 0), 0);
+    const totalStock = allInventoryData.reduce((sum, item) => sum + (item.inventory || 0), 0);
     const uniqueSKUs = new Set(inventoryData.map(item => item.sku)).size;
     const uniqueCities = new Set(inventoryData.map(item => item.city)).size;
     const uniqueChannels = new Set(inventoryData.map(item => item.channel)).size;
@@ -281,15 +306,15 @@ export function InventoryReports() {
         </div>
       ),
     },
-    {
-      key: 'sku',
-      header: 'SKU',
-      render: (row) => (
-        <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
-          {row.sku || '-'}
-        </div>
-      ),
-    },
+    // {
+    //   key: 'sku',
+    //   header: 'SKU',
+    //   render: (row) => (
+    //     <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
+    //       {row.sku || '-'}
+    //     </div>
+    //   ),
+    // },
     {
       key: 'product_name',
       header: 'Product Name',
@@ -417,10 +442,11 @@ export function InventoryReports() {
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Inventory</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400" title="Sum of quantity (units) across all inventory rows">Total Inventory</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                 {summary?.total_inventory.toLocaleString() || '0'}
               </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Sum of units across all rows</p>
             </div>
             <Warehouse className="h-8 w-8 text-blue-500" />
           </div>
@@ -803,7 +829,7 @@ export function InventoryReports() {
             Inventory Data Report
           </h2>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {inventoryData.length} records
+            Showing {((currentPage - 1) * recordsPerPage) + 1} - {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
           </div>
         </div>
         <Table
@@ -813,14 +839,69 @@ export function InventoryReports() {
           keyExtractor={(row, index) => `${row.date}-${row.sku}-${index}`}
           emptyMessage="No inventory data found. Upload an inventory report to get started."
         />
+        
+        {/* Pagination Controls */}
+        {totalRecords > recordsPerPage && (
+          <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+            </div>
+            
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {Math.ceil(totalRecords / recordsPerPage)}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.ceil(totalRecords / recordsPerPage))}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       </div>
 
-      {/* Upload Drawer */}
+      {/* Upload Drawer — does not auto-close so you can see success/error and failed rows */}
       <Drawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
         title="Upload Inventory Report"
+        closeOnBackdropClick={false}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsUploadDrawerOpen(false)}
+              className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-300 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-500"
+            >
+              Close
+            </button>
+          </div>
+        }
       >
         <ReportUpload reportType="inventory" onUploadComplete={handleUploadComplete} />
       </Drawer>

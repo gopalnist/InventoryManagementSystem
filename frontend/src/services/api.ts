@@ -75,12 +75,19 @@ const api = axios.create({
   },
 });
 
-// Demo tenant ID - In production, this would come from auth
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+// Tenant comes from auth store (tenant-based login)
+import { useAuthStore } from '../store/authStore';
 
-// Add tenant header to all requests
+function getTenantId(): string {
+  return useAuthStore.getState().tenantId ?? '00000000-0000-0000-0000-000000000001';
+}
+
+// Add tenant header to all requests; only when logged in (protected routes require auth)
 api.interceptors.request.use((config) => {
-  config.headers['X-Tenant-ID'] = DEMO_TENANT_ID;
+  const tenantId = useAuthStore.getState().tenantId;
+  if (tenantId) {
+    config.headers['X-Tenant-ID'] = tenantId;
+  }
   return config;
 });
 
@@ -800,7 +807,7 @@ export const outboxApi = {
     end_date?: string;
   } = {}) => {
     const searchParams = new URLSearchParams();
-    searchParams.append('tenant_id', DEMO_TENANT_ID);
+    searchParams.append('tenant_id', getTenantId());
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.per_page) searchParams.append('per_page', params.per_page.toString());
     if (params.aggregate_type) searchParams.append('aggregate_type', params.aggregate_type);
@@ -817,7 +824,7 @@ export const outboxApi = {
 
   getPending: async (limit = 100) => {
     const response = await api.get<OutboxEvent[]>(
-      `/outbox/pending?tenant_id=${DEMO_TENANT_ID}&limit=${limit}`
+      `/outbox/pending?tenant_id=${getTenantId()}&limit=${limit}`
     );
     return response.data;
   },
@@ -829,21 +836,21 @@ export const outboxApi = {
 
   getTimeline: async (aggregateType: string, aggregateId: string) => {
     const response = await api.get<EntityTimeline>(
-      `/outbox/timeline/${aggregateType}/${aggregateId}?tenant_id=${DEMO_TENANT_ID}`
+      `/outbox/timeline/${aggregateType}/${aggregateId}?tenant_id=${getTenantId()}`
     );
     return response.data;
   },
 
   getSummary: async (hours = 24) => {
     const response = await api.get<EventSummaryResponse>(
-      `/outbox/stats/summary?tenant_id=${DEMO_TENANT_ID}&hours=${hours}`
+      `/outbox/stats/summary?tenant_id=${getTenantId()}&hours=${hours}`
     );
     return response.data;
   },
 
   getStatistics: async () => {
     const response = await api.get<EventStatistics>(
-      `/outbox/stats/overview?tenant_id=${DEMO_TENANT_ID}`
+      `/outbox/stats/overview?tenant_id=${getTenantId()}`
     );
     return response.data;
   },
@@ -871,7 +878,7 @@ export const outboxApi = {
     limit?: number;
   } = {}) => {
     const searchParams = new URLSearchParams();
-    searchParams.append('tenant_id', DEMO_TENANT_ID);
+    searchParams.append('tenant_id', getTenantId());
     if (params.aggregate_types) searchParams.append('aggregate_types', params.aggregate_types);
     if (params.start_date) searchParams.append('start_date', params.start_date);
     if (params.end_date) searchParams.append('end_date', params.end_date);
@@ -891,7 +898,7 @@ export const outboxApi = {
       query: string;
       results: OutboxEvent[];
       count: number;
-    }>(`/outbox/search?tenant_id=${DEMO_TENANT_ID}&query=${encodeURIComponent(query)}&limit=${limit}`);
+    }>(`/outbox/search?tenant_id=${getTenantId()}&query=${encodeURIComponent(query)}&limit=${limit}`);
     return response.data;
   },
 };
@@ -2173,6 +2180,8 @@ export interface ReportUploadResponse {
   processed_rows: number;
   failed_rows: number;
   message: string;
+  /** Row-level errors when failed_rows > 0, e.g. ["Row 2: invalid date", "Row 5: ..."] */
+  errors?: string[];
 }
 
 export interface ReportUpload {
@@ -2205,6 +2214,7 @@ export interface SalesSummary {
   total_units: number;
   total_orders: number;
   total_products: number;
+  total_records: number;
 }
 
 export interface InventoryReportRow {
@@ -2224,6 +2234,7 @@ export interface InventorySummary {
   total_inventory: number;
   total_products: number;
   total_locations: number;
+  total_records: number;
 }
 
 export interface POReportRow {
@@ -2248,6 +2259,7 @@ export interface POSummary {
   pending_pos: number;
   total_value: number;
   total_locations: number;
+  total_records: number;
 }
 
 export interface AdsReportRow {
@@ -2277,17 +2289,46 @@ export interface AdsSummary {
   avg_revenue_per_click: number;
 }
 
+export interface MainDashboardData {
+  header: { channel: string; start_date: string | null; end_date: string | null; batch_tag?: string | null };
+  ads: { ad_spend: number; ad_order: number; ads_order_value: number; roas: number; avg_order_value: number; cps: number };
+  organic: { organic_order: number; organic_sale_value: number };
+  overall: { total_order: number; total_sale_value: number; total_units: number; avg_order_value: number; roi: number; cps: number };
+  campaign_type_breakdown: Array<{ campaign_type: string; ad_spend: number; ad_order: number; ads_order_value: number; roas: number; avg_order_value: number; cps: number }>;
+  product_performance: Array<{
+    product_identifier: string;
+    product_name: string;
+    category: string;
+    subcategory: string;
+    sales_contribution_pct: number;
+    available_stores: number | null;
+    gmv: number;
+    stock_on_hand: number | null;
+    quantity_sold: number;
+    week_on_week_pct: number | null;
+    month_on_month_pct: number | null;
+    view_to_order: number | null;
+  }>;
+  city_wise_sale: { cities: string[]; rows: Array<Record<string, unknown>> };
+}
+
 export const reportsApi = {
   upload: async (
     file: File,
     channel: string,
     reportType: string,
-    tenantId: string
+    tenantId: string,
+    dataType?: string,
+    batchTag?: string,
+    reportDate?: string
   ): Promise<ReportUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('channel', channel);
     formData.append('report_type', reportType);
+    if (dataType) formData.append('data_type', dataType);
+    if (batchTag) formData.append('batch_tag', batchTag);
+    if (reportDate) formData.append('report_date', reportDate);
 
     const response = await axios.post<ReportUploadResponse>(
       '/api/v1/reports/upload',
@@ -2300,6 +2341,32 @@ export const reportsApi = {
       }
     );
     return response.data;
+  },
+
+  getMainDashboard: async (
+    tenantId: string,
+    channel?: string,
+    startDate?: string,
+    endDate?: string,
+    batchTag?: string
+  ): Promise<MainDashboardData> => {
+    const params: Record<string, string> = {};
+    if (channel) params.channel = channel;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (batchTag) params.batch_tag = batchTag;
+    const response = await axios.get<MainDashboardData>('/api/v1/reports/main-dashboard', {
+      params,
+      headers: { 'X-Tenant-ID': tenantId },
+    });
+    return response.data;
+  },
+
+  getMainDashboardBatchTags: async (tenantId: string): Promise<string[]> => {
+    const response = await axios.get<string[]>('/api/v1/reports/main-dashboard/batch-tags', {
+      headers: { 'X-Tenant-ID': tenantId },
+    });
+    return response.data ?? [];
   },
 
   listUploads: async (

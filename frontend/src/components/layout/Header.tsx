@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
   User,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface HeaderProps {
   module?: 'ims' | 'ams';
@@ -33,8 +34,9 @@ const imsPageTitles: Record<string, { title: string; subtitle?: string }> = {
   '/ims/reports/sales': { title: 'Sales Reports', subtitle: 'Analyze sales performance and revenue' },
   '/ims/reports/inventory': { title: 'Inventory Reports', subtitle: 'Analytics and insights on stock performance' },
   '/ims/reports/purchase-orders': { title: 'PO Reports', subtitle: 'Track purchase orders and status' },
-  '/ims/reports/profit-loss': { title: 'Profit & Loss', subtitle: 'Analyze profitability and financial performance' },
+  // '/ims/reports/profit-loss': { title: 'Profit & Loss', subtitle: 'Analyze profitability and financial performance' },
   '/ims/reports/ads': { title: 'Ads Reports', subtitle: 'Track advertising performance and ROI' },
+  '/ims/reports/main-dashboard': { title: 'Main Dashboard', subtitle: 'Report (MAIN-1) built from uploaded tabs — data can be daily, weekly, or monthly' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences' },
 };
 
@@ -71,11 +73,19 @@ const getPageInfo = (pathname: string, module: 'ims' | 'ams') => {
 
 export function Header({ module = 'ims' }: HeaderProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
   const { currentTheme } = useThemeStore();
+  const { tenantName, logout } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const pageInfo = getPageInfo(location.pathname, module);
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header
@@ -136,8 +146,8 @@ export function Header({ module = 'ims' }: HeaderProps) {
                 NY
               </div>
               <div className="hidden text-left lg:block">
-                <p className="text-sm font-medium text-slate-700">Nourish You</p>
-                <p className="text-xs text-slate-500">Vendor: NU8FU</p>
+                <p className="text-sm font-medium text-slate-700">{tenantName ?? 'Customer'}</p>
+                <p className="text-xs text-slate-500">Tenant</p>
               </div>
               <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>
@@ -151,8 +161,8 @@ export function Header({ module = 'ims' }: HeaderProps) {
                 />
                 <div className="absolute right-0 top-full z-50 mt-2 w-56 animate-scale-in rounded-xl border border-slate-200 bg-white py-2 shadow-lg">
                   <div className="border-b border-slate-100 px-4 py-3">
-                    <p className="text-sm font-medium text-slate-700">Nourish You</p>
-                    <p className="text-xs text-slate-500">admin@nourishyou.com</p>
+                    <p className="text-sm font-medium text-slate-700">{tenantName ?? 'Customer'}</p>
+                    <p className="text-xs text-slate-500">Logged in</p>
                   </div>
                   <div className="py-1">
                     <button className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
@@ -165,7 +175,11 @@ export function Header({ module = 'ims' }: HeaderProps) {
                     </button>
                   </div>
                   <div className="border-t border-slate-100 py-1">
-                    <button className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
                       <LogOut className="h-4 w-4" />
                       Sign out
                     </button>

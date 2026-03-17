@@ -53,76 +53,75 @@ interface SidebarProps {
 const imsNavigation = {
   dashboard: { name: 'Dashboard', href: '/ims', icon: LayoutDashboard },
   groups: [
-    // Temporarily commented out - showing only Reports
-    // {
-    //   section: 'Catalog',
-    //   items: [
-    //     {
-    //       name: 'Products',
-    //       icon: Package,
-    //       defaultOpen: true,
-    //       children: [
-    //         { name: 'All Products', href: '/ims/products', icon: Box },
-    //         { name: 'Product Bundles', href: '/ims/products/bundles', icon: Layers },
-    //       ],
-    //     },
-    //     {
-    //       name: 'Production',
-    //       icon: Factory,
-    //       defaultOpen: false,
-    //       children: [
-    //         { name: 'Bundle Orders', href: '/ims/production/orders', icon: ClipboardList },
-    //         { name: 'History', href: '/ims/production/history', icon: History },
-    //       ],
-    //     },
-    //   ],
-    // },
-    // {
-    //   section: 'Sales',
-    //   items: [
-    //     {
-    //       name: 'Sales',
-    //       icon: ShoppingCart,
-    //       defaultOpen: true,
-    //       children: [
-    //         { name: 'Sales Orders', href: '/ims/sales/orders', icon: ClipboardList },
-    //       ],
-    //     },
-    //   ],
-    // },
-    // {
-    //   section: 'Inventory',
-    //   items: [
-    //     {
-    //       name: 'Stock',
-    //       icon: Warehouse,
-    //       defaultOpen: true,
-    //       children: [
-    //         { name: 'Stock Levels', href: '/ims/inventory', icon: Box },
-    //         { name: 'Stock Movements', href: '/ims/inventory/movements', icon: History },
-    //         { name: 'Warehouses', href: '/ims/warehouses', icon: Building2 },
-    //         { name: 'Reports', href: '/ims/inventory/reports', icon: BarChart3 },
-    //       ],
-    //     },
-    //   ],
-    // },
-    // {
-    //   section: 'Contacts',
-    //   single: { name: 'Parties', href: '/ims/parties', icon: Users },
-    // },
-    // {
-    //   section: 'Purchases',
-    //   items: [
-    //     {
-    //       name: 'Purchases',
-    //       icon: Truck,
-    //       defaultOpen: true,
-    //       children: [
-    //         { name: 'Purchase Orders', href: '/ims/purchases/orders', icon: ClipboardList },
-    //       ],
-    //     },
-    //   ],
-    // },
+    {
+      section: 'Catalog',
+      items: [
+        {
+          name: 'Products',
+          icon: Package,
+          defaultOpen: true,
+          children: [
+            { name: 'All Products', href: '/ims/products', icon: Box },
+            { name: 'Product Bundles', href: '/ims/products/bundles', icon: Layers },
+          ],
+        },
+        {
+          name: 'Production',
+          icon: Factory,
+          defaultOpen: false,
+          children: [
+            { name: 'Bundle Orders', href: '/ims/production/orders', icon: ClipboardList },
+            { name: 'History', href: '/ims/production/history', icon: History },
+          ],
+        },
+      ],
+    },
+    {
+      section: 'Sales',
+      items: [
+        {
+          name: 'Sales',
+          icon: ShoppingCart,
+          defaultOpen: true,
+          children: [
+            { name: 'Sales Orders', href: '/ims/sales/orders', icon: ClipboardList },
+          ],
+        },
+      ],
+    },
+    {
+      section: 'Inventory',
+      items: [
+        {
+          name: 'Stock',
+          icon: Warehouse,
+          defaultOpen: true,
+          children: [
+            { name: 'Stock Levels', href: '/ims/inventory', icon: Box },
+            { name: 'Stock Movements', href: '/ims/inventory/movements', icon: History },
+            { name: 'Warehouses', href: '/ims/warehouses', icon: Building2 },
+            { name: 'Reports', href: '/ims/inventory/reports', icon: BarChart3 },
+          ],
+        },
+      ],
+    },
+    {
+      section: 'Contacts',
+      single: { name: 'Parties', href: '/ims/parties', icon: Users },
+    },
+    {
+      section: 'Purchases',
+      items: [
+        {
+          name: 'Purchases',
+          icon: Truck,
+          defaultOpen: true,
+          children: [
+            { name: 'Purchase Orders', href: '/ims/purchases/orders', icon: ClipboardList },
+          ],
+        },
+      ],
+    },
     {
       section: 'Reports',
       items: [
@@ -134,8 +133,9 @@ const imsNavigation = {
             { name: 'Sales Reports', href: '/ims/reports/sales', icon: ShoppingCart },
             { name: 'Inventory Reports', href: '/ims/reports/inventory', icon: Warehouse },
             { name: 'PO Reports', href: '/ims/reports/purchase-orders', icon: ClipboardList },
-            { name: 'Profit & Loss', href: '/ims/reports/profit-loss', icon: DollarSign },
+            // { name: 'Profit & Loss', href: '/ims/reports/profit-loss', icon: DollarSign },
             { name: 'Ads Reports', href: '/ims/reports/ads', icon: Megaphone },
+            { name: 'Main Dashboard', href: '/ims/reports/main-dashboard', icon: LayoutDashboard },
           ],
         },
       ],

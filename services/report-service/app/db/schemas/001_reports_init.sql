@@ -10,6 +10,16 @@
 BEGIN;
 
 -- ============================================================================
+-- 0. TENANTS (required by report tables; create if not exists for standalone DB)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS tenants (
+    id UUID PRIMARY KEY
+);
+INSERT INTO tenants (id)
+SELECT '00000000-0000-0000-0000-000000000001'::uuid
+WHERE NOT EXISTS (SELECT 1 FROM tenants LIMIT 1);
+
+-- ============================================================================
 -- 1. REPORT CHANNEL CONFIGURATIONS
 -- ============================================================================
 -- Stores column mappings for each channel and report type combination
@@ -81,10 +91,8 @@ CREATE TABLE IF NOT EXISTS sales_reports (
     raw_data JSONB NOT NULL, -- All original columns from the channel
     
     -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT check_quantity_positive CHECK (quantity >= 0),
-    CONSTRAINT check_amount_positive CHECK (total_amount >= 0)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- No CHECK for quantity/total_amount: allow negative for returns/refunds (e.g. ordered_revenue)
 );
 
 CREATE INDEX IF NOT EXISTS idx_sales_reports_tenant_date ON sales_reports(tenant_id, report_date DESC);
@@ -116,9 +124,8 @@ CREATE TABLE IF NOT EXISTS inventory_reports (
     raw_data JSONB NOT NULL,
     
     -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT check_inventory_quantity_positive CHECK (quantity >= 0)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- No CHECK for quantity: allow negative for adjustments/returns
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_reports_tenant_date ON inventory_reports(tenant_id, report_date DESC);
@@ -158,10 +165,8 @@ CREATE TABLE IF NOT EXISTS po_reports (
     raw_data JSONB NOT NULL,
     
     -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT check_po_quantity_positive CHECK (quantity >= 0),
-    CONSTRAINT check_po_amount_positive CHECK (total_amount >= 0)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- No CHECK for quantity/total_amount: allow negative for credit memos/returns
 );
 
 CREATE INDEX IF NOT EXISTS idx_po_reports_tenant_po ON po_reports(tenant_id, po_number);
@@ -231,10 +236,9 @@ CREATE TABLE IF NOT EXISTS ads_reports (
     
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+    -- impressions/clicks are counts (>= 0); spend/sales allow negative (refunds)
     CONSTRAINT check_ads_impressions_positive CHECK (impressions >= 0),
-    CONSTRAINT check_ads_clicks_positive CHECK (clicks >= 0),
-    CONSTRAINT check_ads_spend_positive CHECK (spend >= 0)
+    CONSTRAINT check_ads_clicks_positive CHECK (clicks >= 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_ads_reports_tenant_date ON ads_reports(tenant_id, report_date DESC);

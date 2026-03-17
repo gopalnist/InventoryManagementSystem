@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/layout/Layout';
+import { RequireAuth } from './components/RequireAuth';
+import { Login } from './pages/Login';
 import { PlatformHome } from './pages/PlatformHome';
 import { Dashboard } from './pages/Dashboard';
 import { Products } from './pages/Products';
@@ -22,8 +24,9 @@ import { PurchaseOrders as IMSPurchaseOrders } from './pages/PurchaseOrders';
 import { SalesReports } from './pages/reports/SalesReports';
 import { InventoryReports as ReportsInventoryReports } from './pages/reports/InventoryReports';
 import { POReports } from './pages/reports/POReports';
-import { ProfitLossReports } from './pages/reports/ProfitLossReports';
+// import { ProfitLossReports } from './pages/reports/ProfitLossReports';
 import { AdsReports } from './pages/reports/AdsReports';
+import { MainDashboard } from './pages/reports/MainDashboard';
 
 // AMS Module imports
 import { AMSLayout } from './components/layout/AMSLayout';
@@ -50,11 +53,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Platform Home (Module Selector) */}
-          <Route path="/" element={<PlatformHome />} />
+          {/* Login - tenant-based, no auth required */}
+          <Route path="/login" element={<Login />} />
 
-          {/* IMS Module - Inventory Management System */}
-          <Route path="/ims" element={<Layout module="ims" />}>
+          {/* Platform Home (Module Selector) - requires tenant login */}
+          <Route path="/" element={<RequireAuth><PlatformHome /></RequireAuth>} />
+
+          {/* IMS Module - Inventory Management System - requires tenant login */}
+          <Route path="/ims" element={<RequireAuth><Layout module="ims" /></RequireAuth>}>
             <Route index element={<Dashboard />} />
             {/* Products */}
             <Route path="products" element={<Products />} />
@@ -78,12 +84,13 @@ function App() {
             <Route path="reports/sales" element={<SalesReports />} />
             <Route path="reports/inventory" element={<ReportsInventoryReports />} />
             <Route path="reports/purchase-orders" element={<POReports />} />
-            <Route path="reports/profit-loss" element={<ProfitLossReports />} />
+            {/* <Route path="reports/profit-loss" element={<ProfitLossReports />} /> */}
             <Route path="reports/ads" element={<AdsReports />} />
+            <Route path="reports/main-dashboard" element={<MainDashboard />} />
           </Route>
 
-          {/* AMS Module - Allocation Management System */}
-          <Route path="/ams" element={<AMSLayout />}>
+          {/* AMS Module - Allocation Management System - requires tenant login */}
+          <Route path="/ams" element={<RequireAuth><AMSLayout /></RequireAuth>}>
             <Route index element={<AMSDashboard />} />
             {/* Purchase Orders */}
             <Route path="orders" element={<AMSPurchaseOrders />} />

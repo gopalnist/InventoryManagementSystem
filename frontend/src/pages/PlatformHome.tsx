@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Package,
   Boxes,
@@ -13,7 +13,9 @@ import {
   FileSpreadsheet,
   Link2,
   Settings,
+  LogOut,
 } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 interface ModuleCardProps {
   title: string;
@@ -129,6 +131,14 @@ function FeatureHighlight({
 }
 
 export function PlatformHome() {
+  const navigate = useNavigate();
+  const { tenantName, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   const modules: ModuleCardProps[] = [
     {
       title: 'Inventory Management',
@@ -189,11 +199,14 @@ export function PlatformHome() {
                 <Package className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-slate-900">Nourish Platform</h1>
-                <p className="text-xs text-slate-500">Enterprise Suite</p>
+                <h1 className="text-lg font-bold text-slate-900">IMS</h1>
+                <p className="text-xs text-slate-500">Inventory Management System</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <span className="text-sm text-slate-600">
+                Logged in as <strong>{tenantName ?? 'Customer'}</strong>
+              </span>
               <Link
                 to="/settings"
                 className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
@@ -201,6 +214,14 @@ export function PlatformHome() {
                 <Settings className="h-4 w-4" />
                 Settings
               </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
             </div>
           </div>
         </header>
@@ -340,7 +361,7 @@ export function PlatformHome() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
                 <Package className="h-4 w-4 text-white" />
               </div>
-              <span className="text-sm text-slate-500">Nourish Platform © 2026</span>
+              <span className="text-sm text-slate-500">IMS © 2026</span>
             </div>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-emerald-500" />

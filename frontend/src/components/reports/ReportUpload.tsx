@@ -3,6 +3,7 @@ import { Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { reportsApi } from '../../services/api';
 import type { ReportUploadResponse } from '../../services/api';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface ReportUploadProps {
   reportType: 'sales' | 'inventory' | 'po' | 'profit_loss' | 'ads';
@@ -19,16 +20,19 @@ const CHANNELS = [
 ];
 
 const ADS_SOURCES = [
+  { value: 'zepto', label: 'Zepto' },
+  { value: 'amazon_ads', label: 'Amazon Advertising' },
   { value: 'google_ads', label: 'Google Ads (Product Level)' },
   { value: 'google_pla', label: 'Google PLA (Campaign Level)' },
   { value: 'facebook_ads', label: 'Facebook Ads' },
-  { value: 'amazon_ads', label: 'Amazon Advertising' },
 ];
 
 export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps) {
   const { currentTheme } = useAppStore();
+  const tenantId = useAuthStore((s) => s.tenantId) ?? '';
   const [file, setFile] = useState<File | null>(null);
   const [channel, setChannel] = useState<string>(reportType === 'ads' ? 'google_ads' : 'zepto');
+  const [reportForDate, setReportForDate] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<ReportUploadResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +83,7 @@ export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps
     setUploadResult(null);
 
     try {
-      // Get tenant ID from store or use default
-      const tenantId = '00000000-0000-0000-0000-000000000001'; // Default tenant
-      
-      const response = await reportsApi.upload(file, channel, reportType, tenantId);
+      const response = await reportsApi.upload(file, channel, reportType, tenantId, undefined, undefined, reportForDate || undefined);
       setUploadResult(response);
       
       if (onUploadComplete) {
@@ -92,7 +93,9 @@ export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps
       // Reset file after successful upload
       setFile(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Upload failed');
+      const detail = err.response?.data?.detail;
+      const msg = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d: any) => d?.msg || d).join(' ') : detail || err.message || 'Upload failed';
+      setError(msg);
     } finally {
       setUploading(false);
     }
@@ -111,6 +114,20 @@ export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
         Upload {reportType.charAt(0).toUpperCase() + reportType.slice(1).replace('_', ' & ')} Report
       </h3>
+
+      {/* Report for date (optional) */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Report for date (optional)
+        </label>
+        <input
+          type="date"
+          value={reportForDate}
+          onChange={(e) => setReportForDate(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">For which date this report is. Leave empty to use dates from file or today.</p>
+      </div>
 
       {/* Channel/Ad Source Selection */}
       <div className="mb-4">
@@ -202,35 +219,50 @@ export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps
 
       {/* Upload Result */}
       {uploadResult && (
-        <div
-          className={`mt-4 p-3 rounded-lg flex items-center space-x-2 ${
-            uploadResult.status === 'completed'
-              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-              : uploadResult.status === 'partial'
-              ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-          }`}
-        >
-          {uploadResult.status === 'completed' ? (
-            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
-          )}
-          <div className="flex-1">
-            <p
-              className={`text-sm font-medium ${
-                uploadResult.status === 'completed'
-                  ? 'text-green-700 dark:text-green-400'
-                  : 'text-yellow-700 dark:text-yellow-400'
-              }`}
-            >
-              {uploadResult.message}
-            </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              Processed: {uploadResult.processed_rows} / {uploadResult.total_rows}
-              {uploadResult.failed_rows > 0 && ` (${uploadResult.failed_rows} failed)`}
-            </p>
+        <div className="mt-4 space-y-2">
+          <div
+            className={`p-3 rounded-lg flex items-center space-x-2 ${
+              uploadResult.status === 'completed'
+                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                : uploadResult.status === 'partial'
+                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+            }`}
+          >
+            {uploadResult.status === 'completed' ? (
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <p
+                className={`text-sm font-medium ${
+                  uploadResult.status === 'completed'
+                    ? 'text-green-700 dark:text-green-400'
+                    : 'text-yellow-700 dark:text-yellow-400'
+                }`}
+              >
+                {uploadResult.message}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                Processed: {uploadResult.processed_rows} / {uploadResult.total_rows}
+                {uploadResult.failed_rows > 0 && ` (${uploadResult.failed_rows} failed)`}
+              </p>
+            </div>
           </div>
+          {/* Failed row details */}
+          {uploadResult.failed_rows > 0 && uploadResult.errors && uploadResult.errors.length > 0 && (
+            <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                Failed rows ({uploadResult.errors.length} shown):
+              </p>
+              <ul className="max-h-48 overflow-y-auto text-xs font-mono text-amber-900 dark:text-amber-100 space-y-1 list-disc list-inside">
+                {uploadResult.errors.map((err, i) => (
+                  <li key={i} className="break-all">{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

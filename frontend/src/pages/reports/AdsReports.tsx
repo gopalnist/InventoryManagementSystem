@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, DollarSign, Eye, MousePointer, Upload, Target, Zap, Award } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
 import { Table, type Column } from '../../components/ui/Table';
 import { Drawer } from '../../components/ui/Drawer';
@@ -9,18 +10,20 @@ import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Cart
 
 export function AdsReports() {
   const { currentTheme, addNotification } = useAppStore();
+  const tenantId = useAuthStore((s) => s.tenantId)!;
   const [dateRange, setDateRange] = useState('30d');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [showCustomDateRange, setShowCustomDateRange] = useState(false);
-  const [adsData, setAdsData] = useState<AdsReportRow[]>([]);
+  const [adsData, setAdsData] = useState<AdsReportRow[]>([]); // Paginated data for table
+  const [allAdsData, setAllAdsData] = useState<AdsReportRow[]>([]); // All data for analytics
   const [summary, setSummary] = useState<AdsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
-
-  // Default tenant ID
-  const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 50;
 
   // Format local date without timezone conversion
   const formatLocalDate = (date: Date) => {
@@ -79,41 +82,61 @@ export function AdsReports() {
         return;
       }
       
-      const [data, summaryData] = await Promise.all([
+      const offset = (currentPage - 1) * recordsPerPage;
+      
+      const [paginatedData, allData, summaryData] = await Promise.all([
+        // Fetch paginated data for table
         reportsApi.getAdsReports(
-          DEFAULT_TENANT_ID,
+          tenantId,
+          selectedChannel || undefined,
+          start,
+          end,
+          recordsPerPage,
+          offset
+        ),
+        // Fetch all data for analytics (max 10000 records)
+        reportsApi.getAdsReports(
+          tenantId,
           selectedChannel || undefined,
           start,
           end,
           10000,
           0
         ),
+        // Fetch summary
         reportsApi.getAdsSummary(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
           end
         ),
       ]);
-      setAdsData(data);
+      setAdsData(paginatedData);
+      setAllAdsData(allData);
       setSummary(summaryData);
+      setTotalRecords(summaryData?.total_records || paginatedData.length);
     } catch (error: any) {
       console.error('Failed to load ads data:', error);
       addNotification('error', error.response?.data?.detail || 'Failed to load ads data');
     } finally {
       setLoading(false);
     }
-  }, [dateRange, selectedChannel, customStartDate, customEndDate, getDateRange, addNotification]);
+  }, [dateRange, selectedChannel, customStartDate, customEndDate, currentPage, getDateRange, addNotification]);
 
   useEffect(() => {
     loadAdsData();
   }, [loadAdsData]);
 
   const handleUploadComplete = () => {
-    // Reload data after upload
+    // Reload data after upload (drawer stays open so user can see success/error and failed rows)
+    setCurrentPage(1);
     loadAdsData();
-    setIsUploadDrawerOpen(false);
   };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRange, selectedChannel, customStartDate, customEndDate]);
 
   // Table columns
   const columns: Column<AdsReportRow>[] = [
@@ -402,7 +425,7 @@ export function AdsReports() {
                 <PieChart>
                   <Pie
                     data={(() => {
-                      const channelSpend = adsData.reduce((acc: any, row) => {
+                      const channelSpend = allAdsData.reduce((acc: any, row) => {
                         acc[row.channel] = (acc[row.channel] || 0) + row.spend;
                         return acc;
                       }, {});
@@ -431,7 +454,7 @@ export function AdsReports() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={(() => {
-                    const channelData = adsData.reduce((acc: any, row) => {
+                    const channelData = allAdsData.reduce((acc: any, row) => {
                       if (!acc[row.channel]) {
                         acc[row.channel] = { channel: row.channel, spend: 0, sales: 0 };
                       }
@@ -464,7 +487,7 @@ export function AdsReports() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={(() => {
-                    const productData = adsData.reduce((acc: any, row) => {
+                    const productData = allAdsData.reduce((acc: any, row) => {
                       if (!row.product_identifier) return acc;
                       if (!acc[row.product_identifier]) {
                         acc[row.product_identifier] = { product: row.product_identifier.substring(0, 15), spend: 0, sales: 0 };
@@ -496,7 +519,7 @@ export function AdsReports() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={(() => {
-                    const productData = adsData.reduce((acc: any, row) => {
+                    const productData = allAdsData.reduce((acc: any, row) => {
                       if (!row.product_identifier) return acc;
                       if (!acc[row.product_identifier]) {
                         acc[row.product_identifier] = { product: row.product_identifier.substring(0, 15), sales: 0 };
@@ -531,7 +554,7 @@ export function AdsReports() {
               </h3>
               <div className="space-y-3">
                 {(() => {
-                  const channelData = adsData.reduce((acc: any, row) => {
+                  const channelData = allAdsData.reduce((acc: any, row) => {
                     if (!acc[row.channel]) {
                       acc[row.channel] = { impressions: 0, clicks: 0 };
                     }
@@ -563,7 +586,7 @@ export function AdsReports() {
               </h3>
               <div className="space-y-3">
                 {(() => {
-                  const channelData = adsData.reduce((acc: any, row) => {
+                  const channelData = allAdsData.reduce((acc: any, row) => {
                     if (!acc[row.channel]) {
                       acc[row.channel] = { spend: 0, clicks: 0 };
                     }
@@ -624,7 +647,7 @@ export function AdsReports() {
 
           {/* Row 4: Campaign Performance (if campaigns exist) */}
           {(() => {
-            const campaignData = adsData.filter(row => row.campaign_name).reduce((acc: any, row) => {
+            const campaignData = allAdsData.filter(row => row.campaign_name).reduce((acc: any, row) => {
               if (!acc[row.campaign_name]) {
                 acc[row.campaign_name] = { campaign: row.campaign_name, spend: 0, sales: 0, impressions: 0, clicks: 0 };
               }
@@ -665,12 +688,16 @@ export function AdsReports() {
       {/* Data Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Ads Performance Data
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {adsData.length} records found
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Ads Performance Data
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Showing {((currentPage - 1) * recordsPerPage) + 1} - {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
+              </p>
+            </div>
+          </div>
         </div>
         <Table
           data={adsData}
@@ -678,13 +705,68 @@ export function AdsReports() {
           loading={loading}
           keyExtractor={(row, index) => `${row.channel}-${row.date}-${index}`}
         />
+        
+        {/* Pagination Controls */}
+        {totalRecords > recordsPerPage && (
+          <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+            </div>
+            
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {Math.ceil(totalRecords / recordsPerPage)}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.ceil(totalRecords / recordsPerPage))}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Upload Drawer */}
+      {/* Upload Drawer — does not auto-close so you can see success/error and failed rows */}
       <Drawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
         title="Upload Ads Report"
+        closeOnBackdropClick={false}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsUploadDrawerOpen(false)}
+              className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-300 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-500"
+            >
+              Close
+            </button>
+          </div>
+        }
       >
         <ReportUpload reportType="ads" onUploadComplete={handleUploadComplete} />
       </Drawer>

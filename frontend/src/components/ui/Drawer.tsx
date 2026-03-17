@@ -10,6 +10,8 @@ interface DrawerProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   footer?: React.ReactNode;
+  /** If false, clicking the backdrop will not close the drawer. Default true. */
+  closeOnBackdropClick?: boolean;
 }
 
 const sizeClasses = {
@@ -20,7 +22,7 @@ const sizeClasses = {
   full: 'max-w-full',
 };
 
-export function Drawer({ isOpen, onClose, title, subtitle, children, size = 'lg', footer }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, subtitle, children, size = 'lg', footer, closeOnBackdropClick = true }: DrawerProps) {
   const { currentTheme } = useThemeStore();
 
   // Handle escape key
@@ -45,7 +47,8 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, size = 'lg'
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity animate-fade-in"
-        onClick={onClose}
+        onClick={closeOnBackdropClick ? onClose : undefined}
+        role="presentation"
       />
       
       {/* Drawer Panel */}

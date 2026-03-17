@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ShoppingCart, TrendingUp, DollarSign, Package, Upload, PieChart, LineChart as LineChartIcon, BarChart3, Layers, MapPin, Activity } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
 import { Table, type Column } from '../../components/ui/Table';
 import { Drawer } from '../../components/ui/Drawer';
@@ -9,21 +10,32 @@ import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, T
 
 export function SalesReports() {
   const { currentTheme, addNotification } = useAppStore();
+  const tenantId = useAuthStore((s) => s.tenantId)!;
   const [dateRange, setDateRange] = useState('30d');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [showCustomDateRange, setShowCustomDateRange] = useState(false);
-  const [salesData, setSalesData] = useState<SalesReportRow[]>([]);
+  const [salesData, setSalesData] = useState<SalesReportRow[]>([]); // Paginated data for table
+  const [allSalesData, setAllSalesData] = useState<SalesReportRow[]>([]); // All data for analytics
+  const [allChannelsData, setAllChannelsData] = useState<SalesReportRow[]>([]); // All channels data for channel comparison
   const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 50;
 
-  // Default tenant ID
-  const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+  // Format date as YYYY-MM-DD in local timezone (avoid UTC so "today" matches backend)
+  const toLocalDateString = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   // Calculate date range
-  const getDateRange = useCallback(() => {
+  const getDateRange = useCallback((): { start?: string; end?: string } => {
+    // All time: no date filter so uploaded data (e.g. default report_date = today) always shows
+    if (dateRange === 'all') {
+      return {};
+    }
     // If custom date range is selected
     if (dateRange === 'custom' && customStartDate && customEndDate) {
       return {
@@ -32,7 +44,7 @@ export function SalesReports() {
       };
     }
 
-    // Otherwise use predefined ranges
+    // Otherwise use predefined ranges (local dates so "today" matches backend)
     const today = new Date();
     const startDate = new Date();
     
@@ -54,8 +66,8 @@ export function SalesReports() {
     }
     
     return {
-      start: startDate.toISOString().split('T')[0],
-      end: today.toISOString().split('T')[0],
+      start: toLocalDateString(startDate),
+      end: toLocalDateString(today),
     };
   }, [dateRange, customStartDate, customEndDate]);
 
@@ -63,7 +75,7 @@ export function SalesReports() {
   const loadSalesData = useCallback(async () => {
     setLoading(true);
     try {
-      const { start, end } = getDateRange();
+      const range = getDateRange();
       
       // Don't load if custom date range is selected but dates are not set
       if (dateRange === 'custom' && (!customStartDate || !customEndDate)) {
@@ -71,47 +83,79 @@ export function SalesReports() {
         return;
       }
       
-      const [data, summaryData] = await Promise.all([
+      const offset = (currentPage - 1) * recordsPerPage;
+      const start = range.start;
+      const end = range.end;
+      
+      const [paginatedData, allData, allChannelsUnfilteredData, summaryData] = await Promise.all([
+        // Fetch paginated data for table
         reportsApi.getSalesReports(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
           end,
-          10000, // Increase limit to show all records
+          recordsPerPage,
+          offset
+        ),
+        // Fetch all data for analytics (max 10000 records)
+        reportsApi.getSalesReports(
+          tenantId,
+          selectedChannel || undefined,
+          start,
+          end,
+          10000,
           0
         ),
+        // Fetch all channels data for channel comparison (no channel filter)
+        reportsApi.getSalesReports(
+          tenantId,
+          undefined, // No channel filter - get all channels
+          start,
+          end,
+          10000,
+          0
+        ),
+        // Fetch summary
         reportsApi.getSalesSummary(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
           end
         ),
       ]);
-      setSalesData(data);
+      setSalesData(paginatedData);
+      setAllSalesData(allData);
+      setAllChannelsData(allChannelsUnfilteredData);
       setSummary(summaryData);
+      setTotalRecords(summaryData?.total_records || paginatedData.length);
     } catch (error: any) {
       console.error('Failed to load sales data:', error);
       addNotification('error', error.response?.data?.detail || 'Failed to load sales data');
     } finally {
       setLoading(false);
     }
-  }, [dateRange, selectedChannel, customStartDate, customEndDate, getDateRange, addNotification]);
+  }, [dateRange, selectedChannel, customStartDate, customEndDate, currentPage, getDateRange, addNotification]);
 
   useEffect(() => {
     loadSalesData();
   }, [loadSalesData]);
 
   const handleUploadComplete = () => {
-    // Reload data after upload
+    // Reload data after upload (drawer stays open so user can see success/error and failed rows)
+    setCurrentPage(1); // Reset to first page
     loadSalesData();
-    setIsUploadDrawerOpen(false);
   };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRange, selectedChannel, customStartDate, customEndDate]);
 
   // Calculate Revenue by Channel
   const revenueByChannel = useMemo(() => {
     const channelMap = new Map<string, { revenue: number; units: number; orders: number }>();
     
-    salesData.forEach((row) => {
+    allSalesData.forEach((row) => {
       const channel = row.channel || 'Unknown';
       const current = channelMap.get(channel) || { revenue: 0, units: 0, orders: 0 };
       channelMap.set(channel, {
@@ -129,13 +173,13 @@ export function SalesReports() {
         orders: data.orders,
       }))
       .sort((a, b) => b.value - a.value);
-  }, [salesData]);
+  }, [allSalesData]);
 
   // Calculate Revenue Trend (Daily)
   const revenueTrend = useMemo(() => {
     const dateMap = new Map<string, { revenue: number; units: number; orders: number }>();
     
-    salesData.forEach((row) => {
+    allSalesData.forEach((row) => {
       const date = row.date || '';
       if (!date) return;
       
@@ -155,13 +199,13 @@ export function SalesReports() {
         orders: data.orders,
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [salesData]);
+  }, [allSalesData]);
 
   // Calculate Top Products by Revenue
   const topProductsByRevenue = useMemo(() => {
     const productMap = new Map<string, { revenue: number; units: number; orders: number; name: string }>();
     
-    salesData.forEach((row) => {
+    allSalesData.forEach((row) => {
       const productId = row.item_id || row.item_name || 'Unknown';
       const productName = row.item_name || row.item_id || 'Unknown';
       const current = productMap.get(productId) || { revenue: 0, units: 0, orders: 0, name: productName };
@@ -183,13 +227,13 @@ export function SalesReports() {
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10); // Top 10
-  }, [salesData]);
+  }, [allSalesData]);
 
   // Calculate Top Products by Units Sold
   const topProductsByUnits = useMemo(() => {
     const productMap = new Map<string, { revenue: number; units: number; orders: number; name: string }>();
     
-    salesData.forEach((row) => {
+    allSalesData.forEach((row) => {
       const productId = row.item_id || row.item_name || 'Unknown';
       const productName = row.item_name || row.item_id || 'Unknown';
       const current = productMap.get(productId) || { revenue: 0, units: 0, orders: 0, name: productName };
@@ -211,13 +255,13 @@ export function SalesReports() {
       }))
       .sort((a, b) => b.units - a.units)
       .slice(0, 10); // Top 10
-  }, [salesData]);
+  }, [allSalesData]);
 
   // Calculate Channel Comparison (Daily breakdown by channel)
   const channelComparison = useMemo(() => {
     const dateChannelMap = new Map<string, Map<string, { revenue: number; units: number }>>();
     
-    salesData.forEach((row) => {
+    allChannelsData.forEach((row) => {
       const date = row.date || '';
       const channel = row.channel || 'Unknown';
       if (!date) return;
@@ -255,7 +299,7 @@ export function SalesReports() {
         return data;
       })
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime());
-  }, [salesData]);
+  }, [allChannelsData]);
 
   // Calculate Daily Run Rate (DRR)
   const dailyRunRate = useMemo(() => {
@@ -307,7 +351,7 @@ export function SalesReports() {
   const geographicAnalysis = useMemo(() => {
     const cityMap = new Map<string, { revenue: number; units: number; orders: number }>();
     
-    salesData.forEach((row) => {
+    allSalesData.forEach((row) => {
       // Try to get city from raw_data or brand field
       const city = (row as any).city || (row as any).location || 'Unknown';
       const current = cityMap.get(city) || { revenue: 0, units: 0, orders: 0 };
@@ -327,7 +371,7 @@ export function SalesReports() {
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10); // Top 10 cities
-  }, [salesData]);
+  }, [allSalesData]);
 
   // Chart colors
   const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -347,15 +391,15 @@ export function SalesReports() {
         </div>
       ),
     },
-    {
-      key: 'item_id',
-      header: 'ITEMID',
-      render: (row) => (
-        <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
-          {row.item_id || '-'}
-        </div>
-      ),
-    },
+    // {
+    //   key: 'item_id',
+    //   header: 'ITEMID',
+    //   render: (row) => (
+    //     <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
+    //       {row.item_id || '-'}
+    //     </div>
+    //   ),
+    // },
     {
       key: 'item_name',
       header: 'ITEMNAME',
@@ -453,6 +497,7 @@ export function SalesReports() {
               }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
             >
+              <option value="all">All time</option>
               <option value="7d">Last 7 days</option>
               <option value="30d">Last 30 days</option>
               <option value="90d">Last 90 days</option>
@@ -914,7 +959,7 @@ export function SalesReports() {
       )}
 
       {/* Analytics Section - Channel Comparison */}
-      {salesData.length > 0 && channelComparison.length > 0 && (
+      {allChannelsData.length > 0 && channelComparison.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-4">
             <Layers className="h-5 w-5 text-blue-600" />
@@ -946,7 +991,7 @@ export function SalesReports() {
                   }}
                 />
                 <Legend />
-                {Array.from(new Set(salesData.map(d => d.channel).filter(Boolean))).map((channel, index) => (
+                {Array.from(new Set(allChannelsData.map(d => d.channel).filter(Boolean))).map((channel, index) => (
                   <Bar 
                     key={channel}
                     dataKey={channel} 
@@ -1129,7 +1174,7 @@ export function SalesReports() {
             Sales Data Report
           </h2>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {salesData.length} records
+            Showing {((currentPage - 1) * recordsPerPage) + 1} - {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
           </div>
         </div>
         <Table
@@ -1139,14 +1184,69 @@ export function SalesReports() {
           keyExtractor={(row, index) => `${row.date}-${row.item_id}-${index}`}
           emptyMessage="No sales data found. Upload a sales report to get started."
         />
+        
+        {/* Pagination Controls */}
+        {totalRecords > recordsPerPage && (
+          <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+            </div>
+            
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {Math.ceil(totalRecords / recordsPerPage)}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.ceil(totalRecords / recordsPerPage))}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       </div>
 
-      {/* Upload Drawer */}
+      {/* Upload Drawer — does not auto-close so you can see success/error and failed rows */}
       <Drawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
         title="Upload Sales Report"
+        closeOnBackdropClick={false}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsUploadDrawerOpen(false)}
+              className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-300 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-500"
+            >
+              Close
+            </button>
+          </div>
+        }
       >
         <ReportUpload reportType="sales" onUploadComplete={handleUploadComplete} />
       </Drawer>

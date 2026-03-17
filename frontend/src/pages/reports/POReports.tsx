@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ClipboardList, Truck, Building2, DollarSign, Upload, Package, CheckCircle, Clock, MapPin } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
 import { Table, type Column } from '../../components/ui/Table';
 import { Drawer } from '../../components/ui/Drawer';
@@ -12,15 +13,17 @@ import {
 
 export function POReports() {
   const { currentTheme, addNotification } = useAppStore();
+  const tenantId = useAuthStore((s) => s.tenantId)!;
   const [dateRange, setDateRange] = useState('30d');
-  const [poData, setPOData] = useState<POReportRow[]>([]);
+  const [poData, setPOData] = useState<POReportRow[]>([]); // Paginated data for table
+  const [allPOData, setAllPOData] = useState<POReportRow[]>([]); // All data for analytics
   const [summary, setSummary] = useState<POSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
-
-  // Default tenant ID
-  const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 50;
 
   // Calculate date range - Use local date format to avoid timezone issues
   const formatLocalDate = (date: Date) => {
@@ -62,39 +65,61 @@ export function POReports() {
     setLoading(true);
     try {
       const { start, end } = getDateRange();
-      const [data, summaryData] = await Promise.all([
+      const offset = (currentPage - 1) * recordsPerPage;
+      
+      const [paginatedData, allData, summaryData] = await Promise.all([
+        // Fetch paginated data for table
         reportsApi.getPOReports(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
-          end
+          end,
+          recordsPerPage,
+          offset
         ),
+        // Fetch all data for analytics (max 10000 records)
+        reportsApi.getPOReports(
+          tenantId,
+          selectedChannel || undefined,
+          start,
+          end,
+          10000,
+          0
+        ),
+        // Fetch summary
         reportsApi.getPOSummary(
-          DEFAULT_TENANT_ID,
+          tenantId,
           selectedChannel || undefined,
           start,
           end
         ),
       ]);
-      setPOData(data);
+      setPOData(paginatedData);
+      setAllPOData(allData);
       setSummary(summaryData);
+      setTotalRecords(summaryData?.total_records || paginatedData.length);
     } catch (error: any) {
       console.error('Failed to load PO data:', error);
       addNotification('error', error.response?.data?.detail || 'Failed to load PO data');
     } finally {
       setLoading(false);
     }
-  }, [dateRange, selectedChannel, getDateRange, addNotification]);
+  }, [dateRange, selectedChannel, currentPage, getDateRange, addNotification]);
 
   useEffect(() => {
     loadPOData();
   }, [loadPOData]);
 
   const handleUploadComplete = () => {
-    // Reload data after upload
+    // Reload data after upload (drawer stays open so user can see success/error and failed rows)
+    setCurrentPage(1);
     loadPOData();
-    setIsUploadDrawerOpen(false);
   };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRange, selectedChannel]);
 
   // Get status badge color
   const getStatusBadge = (status: string) => {
@@ -125,7 +150,7 @@ export function POReports() {
   // 1. PO Value by Channel
   const poValueByChannel = useMemo(() => {
     const channelMap = new Map<string, number>();
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       const channel = item.channel || 'Unknown';
       const value = item.value || 0;
       channelMap.set(channel, (channelMap.get(channel) || 0) + value);
@@ -133,12 +158,12 @@ export function POReports() {
     return Array.from(channelMap.entries())
       .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
       .sort((a, b) => b.value - a.value);
-  }, [poData]);
+  }, [allPOData]);
 
   // 2. PO Status Distribution
   const poStatusDistribution = useMemo(() => {
     const statusMap = new Map<string, { count: number; value: number }>();
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       const status = item.status || 'Unknown';
       const existing = statusMap.get(status) || { count: 0, value: 0 };
       existing.count += 1;
@@ -148,12 +173,12 @@ export function POReports() {
     return Array.from(statusMap.entries())
       .map(([name, data]) => ({ name, count: data.count, value: data.value }))
       .sort((a, b) => b.count - a.count);
-  }, [poData]);
+  }, [allPOData]);
 
   // 3. Top Locations by PO Value
   const topLocationsByValue = useMemo(() => {
     const locationMap = new Map<string, { value: number; units: number; count: number }>();
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       const location = item.location || 'Unknown';
       const existing = locationMap.get(location) || { value: 0, units: 0, count: 0 };
       existing.value += item.value || 0;
@@ -171,12 +196,12 @@ export function POReports() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [poData]);
+  }, [allPOData]);
 
   // 4. Top Products by PO Value
   const topProductsByValue = useMemo(() => {
     const productMap = new Map<string, { name: string; value: number; units: number }>();
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       const skuId = item.sku_id || 'Unknown';
       const name = item.product_name || skuId;
       const existing = productMap.get(skuId) || { name, value: 0, units: 0 };
@@ -188,7 +213,7 @@ export function POReports() {
       .map(([sku, data]) => ({ sku, name: data.name, value: data.value, units: data.units }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [poData]);
+  }, [allPOData]);
 
   // 5. PO Fulfillment Rate (ASN vs GRN)
   const fulfillmentMetrics = useMemo(() => {
@@ -196,7 +221,7 @@ export function POReports() {
     let totalGRN = 0;
     let totalUnits = 0;
     
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       totalASN += item.asn_quantity || 0;
       totalGRN += item.grn_quantity || 0;
       totalUnits += item.units || 0;
@@ -213,12 +238,12 @@ export function POReports() {
       asnRate,
       pendingGRN: totalASN - totalGRN
     };
-  }, [poData]);
+  }, [allPOData]);
 
   // 6. PO Trend (by PO number since dates might be null)
   const poTrend = useMemo(() => {
     const poMap = new Map<string, { value: number; units: number }>();
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       const poNumber = item.po_number || 'Unknown';
       const existing = poMap.get(poNumber) || { value: 0, units: 0 };
       existing.value += item.value || 0;
@@ -228,12 +253,12 @@ export function POReports() {
     return Array.from(poMap.entries())
       .map(([po_number, data]) => ({ po_number, value: data.value, units: data.units }))
       .slice(0, 15); // Show last 15 POs
-  }, [poData]);
+  }, [allPOData]);
 
   // 7. Units vs Value by Channel
   const channelComparison = useMemo(() => {
     const channelMap = new Map<string, { units: number; value: number }>();
-    poData.forEach(item => {
+    allPOData.forEach(item => {
       const channel = item.channel || 'Unknown';
       const existing = channelMap.get(channel) || { units: 0, value: 0 };
       existing.units += item.units || 0;
@@ -247,12 +272,12 @@ export function POReports() {
         value: Math.round(data.value / 1000) // Convert to thousands for better visualization
       }))
       .sort((a, b) => b.value - a.value);
-  }, [poData]);
+  }, [allPOData]);
 
   // 8. PO Health Metrics
   const poHealthMetrics = useMemo(() => {
-    const totalValue = poData.reduce((sum, item) => sum + (item.value || 0), 0);
-    const totalUnits = poData.reduce((sum, item) => sum + (item.units || 0), 0);
+    const totalValue = allPOData.reduce((sum, item) => sum + (item.value || 0), 0);
+    const totalUnits = allPOData.reduce((sum, item) => sum + (item.units || 0), 0);
     const uniquePOs = new Set(poData.map(item => item.po_number)).size;
     const uniqueLocations = new Set(poData.map(item => item.location)).size;
     const uniqueChannels = new Set(poData.map(item => item.channel)).size;
@@ -809,7 +834,7 @@ export function POReports() {
             Purchase Order Data Report
           </h2>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {poData.length} records
+            Showing {((currentPage - 1) * recordsPerPage) + 1} - {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
           </div>
         </div>
         <Table
@@ -819,14 +844,69 @@ export function POReports() {
           keyExtractor={(row, index) => `${row.date}-${row.po_number}-${row.sku_id}-${index}`}
           emptyMessage="No PO data found. Upload a PO report to get started."
         />
+        
+        {/* Pagination Controls */}
+        {totalRecords > recordsPerPage && (
+          <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+            </div>
+            
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {Math.ceil(totalRecords / recordsPerPage)}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.ceil(totalRecords / recordsPerPage))}
+                disabled={currentPage >= Math.ceil(totalRecords / recordsPerPage)}
+                className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       </div>
 
-      {/* Upload Drawer */}
+      {/* Upload Drawer — does not auto-close so you can see success/error and failed rows */}
       <Drawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
         title="Upload PO Report"
+        closeOnBackdropClick={false}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsUploadDrawerOpen(false)}
+              className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-300 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-500"
+            >
+              Close
+            </button>
+          </div>
+        }
       >
         <ReportUpload reportType="po" onUploadComplete={handleUploadComplete} />
       </Drawer>
