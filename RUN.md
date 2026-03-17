@@ -95,6 +95,42 @@ The Vite dev server proxies API calls to:
 
 ---
 
+## 5. Docker (optional)
+
+Run **all** `docker compose` commands from the **project root**. The compose file uses `Dockerfile.report-service` and `Dockerfile.frontend` in the project root so the build works on any machine.
+
+```bash
+cd /path/to/InventoryManagementSystem
+docker compose build report-service frontend
+docker compose up -d
+```
+
+---
+
+## Running on a different machine
+
+1. **Get the code** (clone or pull latest):
+   ```bash
+   git clone <repo-url> InventoryManagementSystem
+   cd InventoryManagementSystem
+   # or: cd InventoryManagementSystem && git pull
+   ```
+
+2. **Use a normal folder** – not inside Trash or a path with special characters.
+
+3. **Always run from the project root** (the directory that contains `docker-compose.yml`):
+   ```bash
+   cd /path/to/InventoryManagementSystem
+   docker compose up -d --build
+   ```
+
+4. **If build fails with "Dockerfile not found"** – ensure you have the latest code. The repo should contain these files at the **root** (next to `docker-compose.yml`):
+   - `Dockerfile.report-service`
+   - `Dockerfile.frontend`
+   If they are missing, pull the latest changes or copy them from the repo.
+
+---
+
 ## Quick summary
 
 | What              | Command (from project root) |

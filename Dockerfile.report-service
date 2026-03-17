@@ -1,0 +1,18 @@
+# Report Service – build from repo root (used by docker-compose)
+# Same as services/report-service/Dockerfile; kept at root so compose always finds it.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY services/report-service/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY services/report-service/ .
+COPY shared /app/shared
+
+ENV PYTHONPATH=/app:/app/shared
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8005
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8005"]

@@ -1,4 +1,8 @@
 # =============================================================================
+# IMPORTANT: Run all "docker compose" commands from the PROJECT ROOT (this directory).
+# Example: docker compose build report-service   or   docker compose up -d
+# Report/frontend use Dockerfile.report-service and Dockerfile.frontend at project root.
+# =============================================================================
 # PORTS (host -> service)
 # =============================================================================
 #   5432  -> postgres (ims_db)
@@ -8,8 +12,8 @@
 #   8005  -> report-service (Reports / Main Dashboard API)
 #   3001  -> frontend (UI)
 # =============================================================================
-
-version: '3.8'
+# (version is obsolete in Compose V2 and has been removed)
+# =============================================================================
 
 services:
   # =============================================================================
@@ -80,7 +84,7 @@ services:
   report-service:
     build:
       context: .
-      dockerfile: services/report-service/Dockerfile
+      dockerfile: Dockerfile.report-service
     container_name: ims-report-service
     restart: unless-stopped
     environment:
@@ -107,7 +111,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: Dockerfile.frontend
     container_name: ims-frontend
     restart: unless-stopped
     environment:
