@@ -1834,7 +1834,11 @@ async def get_ads_reports(
         """
         params = [str(tenant_id)]
         
-        if channel:
+        # Amazon retail vs Amazon Advertising share ads data under amazon_ads; include both when filtering Amazon
+        if channel == "amazon":
+            query += " AND (channel = %s OR channel = 'amazon_ads')"
+            params.append(channel)
+        elif channel:
             query += " AND channel = %s"
             params.append(channel)
         
@@ -1911,7 +1915,10 @@ async def get_ads_summary(
         """
         params = [str(tenant_id)]
         
-        if channel:
+        if channel == "amazon":
+            query += " AND (channel = %s OR channel = 'amazon_ads')"
+            params.append(channel)
+        elif channel:
             query += " AND channel = %s"
             params.append(channel)
         
@@ -2101,6 +2108,272 @@ def _run_main_dashboard_queries(cur, params, channel_filter, date_filter, use_ex
     }
 
 
+# SQL fragments: match Zepto codes (SP/SB/SD) and Amazon "Sponsored *" Type values
+_WHERE_CT_SP = """(
+    UPPER(TRIM(COALESCE(campaign_type, ''))) = 'SP'
+    OR (
+        UPPER(TRIM(COALESCE(campaign_type, ''))) LIKE 'SPONSORED %%'
+        AND UPPER(TRIM(COALESCE(campaign_type, ''))) NOT LIKE '%%BRAND%%'
+        AND UPPER(TRIM(COALESCE(campaign_type, ''))) NOT LIKE '%%DISPLAY%%'
+    )
+)"""
+_WHERE_CT_SP_OR_NULL = f"""({_WHERE_CT_SP} OR campaign_type IS NULL)"""
+_WHERE_CT_SB = """(
+    UPPER(TRIM(COALESCE(campaign_type, ''))) = 'SB'
+    OR UPPER(TRIM(COALESCE(campaign_type, ''))) LIKE '%%SPONSORED BRAND%%'
+    OR UPPER(TRIM(COALESCE(campaign_type, ''))) LIKE '%%HEADLINE%%'
+)"""
+_WHERE_CT_SD = """(
+    UPPER(TRIM(COALESCE(campaign_type, ''))) = 'SD'
+    OR UPPER(TRIM(COALESCE(campaign_type, ''))) LIKE '%%DISPLAY%%'
+)"""
+
+
+def _run_main_dashboard_workbook_data(cur, params, channel_filter, date_filter, batch_filter, batch_params):
+    """
+    Extra tab payloads for Weekly Report Excel export (AD-CITY, AD-CATEGORY, SP/SB/SD product, TOTAL-CITY detail).
+    Each query is isolated with rollback on failure so partial schema still returns MAIN-1-compatible data.
+    """
+    batch_params = batch_params or []
+    qparams = params + batch_params
+    bf = batch_filter or ""
+
+    def _rollback():
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
+
+    out = {
+        'ad_city_level': [],
+        'ad_category_performance': [],
+        'ad_sp_product': [],
+        'ad_sb_product': [],
+        'ad_sd_product': [],
+        'total_city_wise_sale_detail': [],
+    }
+
+    # --- AD-CITY (SP + NULL campaign_type, city present) ---
+    try:
+        cur.execute(f"""
+            SELECT LOWER(TRIM(city)) AS _ck, MIN(TRIM(city)) AS city_name,
+                   MAX(NULLIF(TRIM(raw_data->>'BrandID'), '')) AS brand_id,
+                   MAX(NULLIF(TRIM(raw_data->>'BrandName'), '')) AS brand_name,
+                   COALESCE(SUM(clicks), 0)::bigint AS clicks,
+                   COALESCE(SUM(impressions), 0)::bigint AS impressions,
+                   COALESCE(SUM(orders), 0)::bigint AS orders,
+                   COALESCE(SUM(spend), 0)::float AS spend,
+                   COALESCE(SUM(sales), 0)::float AS revenue
+            FROM ads_reports
+            WHERE tenant_id = %s {channel_filter} {date_filter} {bf}
+              AND city IS NOT NULL AND TRIM(city) <> ''
+              AND {_WHERE_CT_SP_OR_NULL}
+            GROUP BY LOWER(TRIM(city))
+            ORDER BY MIN(TRIM(city))
+        """, qparams)
+        for r in cur.fetchall() or []:
+            sp = float(r['spend'] or 0)
+            cl = int(r['clicks'] or 0)
+            im = int(r['impressions'] or 0)
+            rev = float(r['revenue'] or 0)
+            ord_ = int(r['orders'] or 0)
+            cpc = (sp / cl) if cl else 0.0
+            cpm = (sp / im * 1000.0) if im else 0.0
+            roas = (rev / sp) if sp else 0.0
+            out['ad_city_level'].append({
+                'campaign_type': 'SP',
+                'city_name': r['city_name'] or '',
+                'brand_id': r['brand_id'] or '',
+                'brand_name': r['brand_name'] or '',
+                'atc': 0,
+                'clicks': cl,
+                'cpc': round(cpc, 4),
+                'cpm': round(cpm, 4),
+                'impressions': im,
+                'orders': ord_,
+                'other_skus': 0,
+                'revenue': rev,
+                'roas': round(roas, 6),
+                'robas': 0.0,
+                'same_skus': 0,
+                'spend': sp,
+            })
+    except Exception:
+        _rollback()
+
+    # --- AD-CATEGORY (SB) ---
+    try:
+        cur.execute(f"""
+            SELECT COALESCE(NULLIF(TRIM(category), ''), '(uncategorized)') AS category,
+                   COALESCE(campaign_name, '') AS campaign_name,
+                   MAX(NULLIF(TRIM(raw_data->>'BrandID'), '')) AS brand_id,
+                   MAX(NULLIF(TRIM(raw_data->>'BrandName'), '')) AS brand_name,
+                   MAX(NULLIF(TRIM(raw_data->>'Campaign_id'), '')) AS campaign_id,
+                   COALESCE(SUM(clicks), 0)::bigint AS clicks,
+                   COALESCE(SUM(impressions), 0)::bigint AS impressions,
+                   COALESCE(SUM(orders), 0)::bigint AS orders,
+                   COALESCE(SUM(spend), 0)::float AS spend,
+                   COALESCE(SUM(sales), 0)::float AS revenue
+            FROM ads_reports
+            WHERE tenant_id = %s {channel_filter} {date_filter} {bf}
+              AND {_WHERE_CT_SB}
+            GROUP BY COALESCE(NULLIF(TRIM(category), ''), '(uncategorized)'), COALESCE(campaign_name, '')
+            ORDER BY category, campaign_name
+        """, qparams)
+        for r in cur.fetchall() or []:
+            sp = float(r['spend'] or 0)
+            im = int(r['impressions'] or 0)
+            cl = int(r['clicks'] or 0)
+            rev = float(r['revenue'] or 0)
+            cpm = (sp / im * 1000.0) if im else 0.0
+            roas = (rev / sp) if sp else 0.0
+            cid = r.get('campaign_id')
+            try:
+                cid_num = float(cid) if cid is not None and str(cid).replace('.', '', 1).isdigit() else cid
+            except Exception:
+                cid_num = cid
+            out['ad_category_performance'].append({
+                'campaign_type': 'SB',
+                'brand_id': r['brand_id'] or '',
+                'brand_name': r['brand_name'] or '',
+                'atc': 0,
+                'campaign_id': cid_num if cid_num not in (None, '') else '',
+                'campaign_name': r['campaign_name'] or '',
+                'category': r['category'] or '',
+                'clicks': cl,
+                'cpm': round(cpm, 4),
+                'impressions': im,
+                'orders': ord_,
+                'other_skus': 0,
+                'revenue': rev,
+                'roas': round(roas, 6),
+                'robas': 0.0,
+                'same_skus': 0,
+            })
+    except Exception:
+        _rollback()
+
+    def _product_rows(where_ct: str):
+        rows = []
+        try:
+            cur.execute(f"""
+                SELECT product_identifier,
+                       MAX(COALESCE(NULLIF(TRIM(product_name), ''), '')) AS product_name,
+                       MAX(NULLIF(TRIM(raw_data->>'BrandID'), '')) AS brand_id,
+                       MAX(NULLIF(TRIM(raw_data->>'BrandName'), '')) AS brand_name,
+                       COALESCE(campaign_name, '') AS campaign_name,
+                       COALESCE(NULLIF(TRIM(category), ''), '') AS category,
+                       MAX(NULLIF(TRIM(raw_data->>'Campaign_id'), '')) AS campaign_id,
+                       COALESCE(SUM(clicks), 0)::bigint AS clicks,
+                       COALESCE(SUM(impressions), 0)::bigint AS impressions,
+                       COALESCE(SUM(orders), 0)::bigint AS orders,
+                       COALESCE(SUM(spend), 0)::float AS spend,
+                       COALESCE(SUM(sales), 0)::float AS revenue
+                FROM ads_reports
+                WHERE tenant_id = %s {channel_filter} {date_filter} {bf}
+                  AND product_identifier IS NOT NULL AND TRIM(product_identifier) <> ''
+                  AND {where_ct}
+                GROUP BY product_identifier, COALESCE(campaign_name, ''), COALESCE(NULLIF(TRIM(category), ''), '')
+                ORDER BY revenue DESC NULLS LAST
+                LIMIT 5000
+            """, qparams)
+            for r in cur.fetchall() or []:
+                sp = float(r['spend'] or 0)
+                im = int(r['impressions'] or 0)
+                cl = int(r['clicks'] or 0)
+                rev = float(r['revenue'] or 0)
+                ord_ = int(r['orders'] or 0)
+                cpc = (sp / cl) if cl else 0.0
+                cpm = (sp / im * 1000.0) if im else 0.0
+                ctr = (cl / im * 100.0) if im else 0.0
+                roas = (rev / sp) if sp else 0.0
+                cid = r.get('campaign_id')
+                try:
+                    cid_num = float(cid) if cid is not None and str(cid).replace('.', '', 1).replace('-', '', 1).isdigit() else cid
+                except Exception:
+                    cid_num = cid
+                base = {
+                    'product_identifier': r['product_identifier'] or '',
+                    'product_name': (r['product_name'] or '')[:500],
+                    'brand_id': r['brand_id'] or '',
+                    'brand_name': r['brand_name'] or '',
+                    'atc': 0,
+                    'campaign_id': cid_num if cid_num not in (None, '') else '',
+                    'campaign_name': r['campaign_name'] or '',
+                    'category': r['category'] or '',
+                    'clicks': cl,
+                    'cpm': round(cpm, 4),
+                    'ctr': round(ctr, 4),
+                    'impressions': im,
+                    'orders': ord_,
+                    'other_skus': 0,
+                    'revenue': rev,
+                    'roas': round(roas, 6),
+                    'robas': 0.0,
+                    'cpc': round(cpc, 4),
+                    'spend': sp,
+                }
+                rows.append(base)
+        except Exception:
+            _rollback()
+        return rows
+
+    out['ad_sp_product'] = _product_rows(_WHERE_CT_SP)
+    out['ad_sb_product'] = _product_rows(_WHERE_CT_SB)
+    out['ad_sd_product'] = _product_rows(_WHERE_CT_SD)
+
+    # --- TOTAL-CITY-WISE SALE detail (line-level sales_reports) ---
+    try:
+        cur.execute(f"""
+            SELECT report_date, product_identifier, product_name,
+                   COALESCE(
+                     NULLIF(TRIM(raw_data->>'EAN'), ''),
+                     NULLIF(TRIM(raw_data->>'ean'), ''),
+                     NULLIF(TRIM(raw_data->>'SKU Number'), '')
+                   ) AS ean,
+                   COALESCE(NULLIF(TRIM(sku_category), ''), NULLIF(TRIM(raw_data->>'SKU Category'), '')) AS sku_category,
+                   COALESCE(NULLIF(TRIM(sku_sub_category), ''), NULLIF(TRIM(raw_data->>'SKU Sub Category'), '')) AS sku_sub_category,
+                   COALESCE(NULLIF(TRIM(brand_name), ''), NULLIF(TRIM(raw_data->>'Brand Name'), '')) AS brand_name,
+                   COALESCE(
+                     NULLIF(TRIM(raw_data->>'Manufacturer Name'), ''),
+                     NULLIF(TRIM(raw_data->>'ManufacturerName'), '')
+                   ) AS manufacturer_name,
+                   COALESCE(
+                     NULLIF(TRIM(raw_data->>'Manufacturer ID'), ''),
+                     NULLIF(TRIM(raw_data->>'ManufacturerId'), '')
+                   ) AS manufacturer_id,
+                   city, quantity, unit_price, total_amount
+            FROM sales_reports
+            WHERE tenant_id = %s {channel_filter} {date_filter} {bf}
+            ORDER BY report_date NULLS LAST, city NULLS LAST
+            LIMIT 50000
+        """, qparams)
+        for r in cur.fetchall() or []:
+            rd = r.get('report_date')
+            rd_out = rd.isoformat() if hasattr(rd, 'isoformat') else (str(rd) if rd else '')
+            ean_val = r.get('ean')
+            ean_out = '' if ean_val is None else str(ean_val).strip()
+            out['total_city_wise_sale_detail'].append({
+                'report_date': rd_out,
+                'sku_number': r.get('product_identifier') or '',
+                'sku_name': (r.get('product_name') or '')[:500],
+                'ean': ean_out,
+                'sku_category': r.get('sku_category') or '',
+                'sku_sub_category': r.get('sku_sub_category') or '',
+                'brand_name': r.get('brand_name') or '',
+                'manufacturer_name': r.get('manufacturer_name') or '',
+                'manufacturer_id': r.get('manufacturer_id') or '',
+                'city': r.get('city') or '',
+                'quantity': float(r['quantity']) if r.get('quantity') is not None else 0.0,
+                'mrp': float(r['unit_price']) if r.get('unit_price') is not None else None,
+                'gmv': float(r['total_amount']) if r.get('total_amount') is not None else None,
+            })
+    except Exception:
+        _rollback()
+
+    return out
+
+
 @router.get("/main-dashboard/batch-tags")
 async def list_main_dashboard_batch_tags(
     x_tenant_id: str = Header(...),
@@ -2193,5 +2466,61 @@ async def get_main_dashboard(
     return {
         'header': {'channel': channel or 'all', 'start_date': start_date, 'end_date': end_date, 'batch_tag': batch_tag},
         **data,
+    }
+
+
+@router.get("/main-dashboard/workbook-data")
+async def get_main_dashboard_workbook_data(
+    x_tenant_id: str = Header(...),
+    channel: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    batch_tag: Optional[str] = Query(None),
+):
+    """
+    Aggregated rows for extra Weekly Report Excel tabs (AD-CITY, AD-CATEGORY, SP/SB/SD products, TOTAL-CITY detail).
+    Uses the same filters as GET /main-dashboard.
+    """
+    tenant_id = get_tenant_id(x_tenant_id)
+    params = [str(tenant_id)]
+    if channel == 'amazon':
+        channel_filter = " AND (channel = %s OR channel = 'amazon_ads')"
+        params.append(channel)
+    elif channel:
+        channel_filter = " AND channel = %s"
+        params.append(channel)
+    else:
+        channel_filter = ""
+    date_filter = ""
+    if not batch_tag:
+        if start_date:
+            date_filter += " AND report_date >= %s"
+            params.append(start_date)
+        if end_date:
+            date_filter += " AND report_date <= %s"
+            params.append(end_date)
+    batch_filter = ""
+    batch_params = []
+    if batch_tag:
+        batch_filter = " AND upload_id IN (SELECT id FROM report_uploads WHERE tenant_id = %s AND batch_tag = %s)"
+        batch_params = [str(tenant_id), batch_tag]
+
+    try:
+        with get_db_cursor(dict_cursor=True) as cur:
+            extra = _run_main_dashboard_workbook_data(
+                cur, params, channel_filter, date_filter, batch_filter, batch_params
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        detail = str(e)
+        low = detail.lower()
+        if "connection" in low or "could not connect" in low or "connect" in low and "refused" in low:
+            detail = "Database connection failed. Check DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD and that PostgreSQL is running."
+        raise HTTPException(status_code=503, detail=detail)
+
+    return {
+        'header': {'channel': channel or 'all', 'start_date': start_date, 'end_date': end_date, 'batch_tag': batch_tag},
+        **extra,
     }
 

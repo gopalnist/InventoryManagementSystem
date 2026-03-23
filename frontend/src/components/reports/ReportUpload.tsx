@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { reportsApi } from '../../services/api';
 import type { ReportUploadResponse } from '../../services/api';
-import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
+import { AD_SOURCE_OPTIONS } from '../../constants/adSources';
 
 interface ReportUploadProps {
   reportType: 'sales' | 'inventory' | 'po' | 'profit_loss' | 'ads';
@@ -19,19 +19,10 @@ const CHANNELS = [
   { value: 'swiggy', label: 'Swiggy' },
 ];
 
-const ADS_SOURCES = [
-  { value: 'zepto', label: 'Zepto' },
-  { value: 'amazon_ads', label: 'Amazon Advertising' },
-  { value: 'google_ads', label: 'Google Ads (Product Level)' },
-  { value: 'google_pla', label: 'Google PLA (Campaign Level)' },
-  { value: 'facebook_ads', label: 'Facebook Ads' },
-];
-
 export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps) {
-  const { currentTheme } = useAppStore();
   const tenantId = useAuthStore((s) => s.tenantId) ?? '';
   const [file, setFile] = useState<File | null>(null);
-  const [channel, setChannel] = useState<string>(reportType === 'ads' ? 'google_ads' : 'zepto');
+  const [channel, setChannel] = useState<string>('zepto');
   const [reportForDate, setReportForDate] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<ReportUploadResponse | null>(null);
@@ -39,7 +30,7 @@ export function ReportUpload({ reportType, onUploadComplete }: ReportUploadProps
   const [dragActive, setDragActive] = useState(false);
   
   // Determine which options to show based on report type
-  const sourceOptions = reportType === 'ads' ? ADS_SOURCES : CHANNELS;
+  const sourceOptions = reportType === 'ads' ? AD_SOURCE_OPTIONS : CHANNELS;
   const sourceLabel = reportType === 'ads' ? 'Ad Source' : 'Channel';
 
   const handleFileSelect = (selectedFile: File) => {

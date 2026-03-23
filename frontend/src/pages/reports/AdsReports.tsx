@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, DollarSign, Eye, MousePointer, Upload, Target, Zap, Award } from 'lucide-react';
+import { TrendingUp, DollarSign, Eye, MousePointer, Upload, Target, Zap, Award, Download, FileSpreadsheet } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
@@ -7,6 +7,8 @@ import { Table, type Column } from '../../components/ui/Table';
 import { Drawer } from '../../components/ui/Drawer';
 import { reportsApi, type AdsReportRow, type AdsSummary } from '../../services/api';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { exportAlignedTable, formatReportDate, formatChannelLabel } from '../../utils/reportExport';
+import { AD_SOURCE_OPTIONS } from '../../constants/adSources';
 
 export function AdsReports() {
   const { currentTheme, addNotification } = useAppStore();
@@ -229,23 +231,75 @@ export function AdsReports() {
     },
   ];
 
+  const handleExportAds = (format: 'csv' | 'xlsx') => {
+    if (!allAdsData.length) {
+      addNotification('error', 'No data to export for the current filters');
+      return;
+    }
+    const { start, end } = getDateRange();
+    const ch = selectedChannel ? `_${selectedChannel}` : '';
+    const base = `ads-report_${start}_${end}${ch}`;
+    const headers = [
+      'Date',
+      'Ad Source',
+      'Campaign',
+      'Product',
+      'Impressions',
+      'Clicks',
+      'Spend',
+      'Sales',
+      'ROAS',
+    ];
+    const dataRows = allAdsData.map((row) => [
+      formatReportDate(row.date),
+      formatChannelLabel(row.channel),
+      row.campaign_name || '-',
+      row.product_name || row.product_identifier || '-',
+      row.impressions,
+      row.clicks,
+      `₹${row.spend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `₹${row.sales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `${row.roas.toFixed(2)}x`,
+    ]);
+    exportAlignedTable(headers, dataRows, base, format, 'Ads');
+    addNotification('success', format === 'csv' ? 'CSV download started' : 'Excel download started');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Upload Button */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ads Reports</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Track advertising performance across channels
           </p>
         </div>
-        <button
-          onClick={() => setIsUploadDrawerOpen(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Ads Report
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleExportAds('csv')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExportAds('xlsx')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Download Excel
+          </button>
+          <button
+            onClick={() => setIsUploadDrawerOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Ads Report
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -311,10 +365,11 @@ export function AdsReports() {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Sources</option>
-              <option value="google_ads">Google Ads</option>
-              <option value="google_pla">Google PLA</option>
-              <option value="facebook_ads">Facebook Ads</option>
-              <option value="amazon_ads">Amazon Advertising</option>
+              {AD_SOURCE_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -77,6 +77,7 @@ const api = axios.create({
 
 // Tenant comes from auth store (tenant-based login)
 import { useAuthStore } from '../store/authStore';
+import type { MainDashboardWorkbookExtras } from '../utils/mainDashboardWorkbookSheets';
 
 function getTenantId(): string {
   return useAuthStore.getState().tenantId ?? '00000000-0000-0000-0000-000000000001';
@@ -2313,6 +2314,8 @@ export interface MainDashboardData {
   city_wise_sale: { cities: string[]; rows: Array<Record<string, unknown>> };
 }
 
+export type { MainDashboardWorkbookExtras };
+
 export const reportsApi = {
   upload: async (
     file: File,
@@ -2360,6 +2363,28 @@ export const reportsApi = {
       params,
       headers: { 'X-Tenant-ID': tenantId },
     });
+    return response.data;
+  },
+
+  getMainDashboardWorkbookData: async (
+    tenantId: string,
+    channel?: string,
+    startDate?: string,
+    endDate?: string,
+    batchTag?: string
+  ): Promise<MainDashboardWorkbookExtras> => {
+    const params: Record<string, string> = {};
+    if (channel) params.channel = channel;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (batchTag) params.batch_tag = batchTag;
+    const response = await axios.get<MainDashboardWorkbookExtras>(
+      '/api/v1/reports/main-dashboard/workbook-data',
+      {
+        params,
+        headers: { 'X-Tenant-ID': tenantId },
+      }
+    );
     return response.data;
   },
 

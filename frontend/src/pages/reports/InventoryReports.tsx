@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Warehouse, Package, TrendingDown, DollarSign, Box, Upload, MapPin, BarChart3, AlertTriangle } from 'lucide-react';
+import { Warehouse, Package, TrendingDown, DollarSign, Box, Upload, MapPin, BarChart3, AlertTriangle, Download, FileSpreadsheet } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
@@ -10,11 +10,15 @@ import {
   PieChart, Pie, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
+import { exportAlignedTable, formatReportDate, formatChannelLabel } from '../../utils/reportExport';
 
 export function InventoryReports() {
   const { currentTheme, addNotification } = useAppStore();
   const tenantId = useAuthStore((s) => s.tenantId)!;
   const [dateRange, setDateRange] = useState('30d');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [showCustomDateRange, setShowCustomDateRange] = useState(false);
   const [inventoryData, setInventoryData] = useState<InventoryReportRow[]>([]); // Paginated data for table
   const [allInventoryData, setAllInventoryData] = useState<InventoryReportRow[]>([]); // All data for analytics
   const [summary, setSummary] = useState<InventorySummary | null>(null);
@@ -34,9 +38,13 @@ export function InventoryReports() {
   };
 
   const getDateRange = useCallback(() => {
+    if (dateRange === 'custom' && customStartDate && customEndDate) {
+      return { start: customStartDate, end: customEndDate };
+    }
+
     const today = new Date();
     const startDate = new Date();
-    
+
     switch (dateRange) {
       case '7d':
         startDate.setDate(today.getDate() - 7);
@@ -53,17 +61,22 @@ export function InventoryReports() {
       default:
         startDate.setDate(today.getDate() - 30);
     }
-    
+
     return {
       start: formatLocalDate(startDate),
       end: formatLocalDate(today),
     };
-  }, [dateRange]);
+  }, [dateRange, customStartDate, customEndDate]);
 
   // Load inventory data
   const loadInventoryData = useCallback(async () => {
     setLoading(true);
     try {
+      if (dateRange === 'custom' && (!customStartDate || !customEndDate)) {
+        setLoading(false);
+        return;
+      }
+
       const { start, end } = getDateRange();
       const offset = (currentPage - 1) * recordsPerPage;
       
@@ -104,7 +117,7 @@ export function InventoryReports() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, selectedChannel, currentPage, getDateRange, addNotification]);
+  }, [dateRange, customStartDate, customEndDate, selectedChannel, currentPage, getDateRange, addNotification]);
 
   useEffect(() => {
     loadInventoryData();
@@ -119,7 +132,7 @@ export function InventoryReports() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateRange, selectedChannel]);
+  }, [dateRange, selectedChannel, customStartDate, customEndDate]);
 
   // Chart colors
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -378,23 +391,66 @@ export function InventoryReports() {
     },
   ];
 
+  const handleExportInventory = (format: 'csv' | 'xlsx') => {
+    if (!allInventoryData.length) {
+      addNotification('error', 'No data to export for the current filters');
+      return;
+    }
+    const { start, end } = getDateRange();
+    const ch = selectedChannel ? `_${selectedChannel}` : '';
+    const base = `inventory-report_${start}_${end}${ch}`;
+    const headers = ['Date', 'Product Name', 'Channel', 'Inventory', 'Units', 'City', 'Location'];
+    const dataRows = allInventoryData.map((row) => {
+      const qty = row.inventory ?? (row as { quantity?: number }).quantity ?? 0;
+      return [
+        formatReportDate(row.date),
+        row.product_name || '-',
+        formatChannelLabel(row.channel),
+        qty,
+        qty,
+        row.city || '-',
+        row.location || row.warehouse_code || '-',
+      ];
+    });
+    exportAlignedTable(headers, dataRows, base, format, 'Inventory');
+    addNotification('success', format === 'csv' ? 'CSV download started' : 'Excel download started');
+  };
+
   return (
     <>
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory Reports</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Analyze inventory levels, stock status, and warehouse metrics
           </p>
         </div>
-        <button
-          onClick={() => setIsUploadDrawerOpen(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Inventory Report
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleExportInventory('csv')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExportInventory('xlsx')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Download Excel
+          </button>
+          <button
+            onClick={() => setIsUploadDrawerOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Inventory Report
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -406,15 +462,45 @@ export function InventoryReports() {
             </label>
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
+              onChange={(e) => {
+                setDateRange(e.target.value);
+                if (e.target.value !== 'custom') {
+                  setShowCustomDateRange(false);
+                  setCustomStartDate('');
+                  setCustomEndDate('');
+                } else {
+                  setShowCustomDateRange(true);
+                }
+              }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
             >
               <option value="7d">Last 7 days</option>
               <option value="30d">Last 30 days</option>
               <option value="90d">Last 90 days</option>
               <option value="1y">Last year</option>
+              <option value="custom">Custom Range</option>
             </select>
           </div>
+
+          {showCustomDateRange && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">From:</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">To:</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                min={customStartDate}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -434,6 +520,22 @@ export function InventoryReports() {
               <option value="swiggy">Swiggy</option>
             </select>
           </div>
+
+          {(selectedChannel || dateRange !== '30d' || (dateRange === 'custom' && (customStartDate || customEndDate))) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedChannel('');
+                setDateRange('30d');
+                setCustomStartDate('');
+                setCustomEndDate('');
+                setShowCustomDateRange(false);
+              }}
+              className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { LayoutDashboard, Upload, DollarSign, TrendingUp, BarChart3, MapPin, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, Upload, DollarSign, TrendingUp, BarChart3, MapPin, Package, ChevronDown, ChevronUp, Download, FileSpreadsheet } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { reportsApi, type MainDashboardData, type ReportUploadResponse } from '../../services/api';
 import { Drawer } from '../../components/ui/Drawer';
 import { Select } from '../../components/ui/Select';
 import { useAuthStore } from '../../store/authStore';
+import { formatChannelLabel } from '../../utils/reportExport';
+import { downloadMainDashboardExcel, downloadMainDashboardProductCsv } from '../../utils/mainDashboardExport';
 
 const WEEKLY_UPLOAD_SOURCES = [
   { id: 'city_wise_sale', label: 'TOTAL-CITY-WISE SALE', reportType: 'sales' as const, dataType: undefined, description: 'Sales by Date, SKU, City (Excel/CSV)' },
@@ -82,6 +84,8 @@ export function MainDashboard() {
   const [filterSubcategory, setFilterSubcategory] = useState<string>('');
   const [filterProductName, setFilterProductName] = useState<string>('');
   const [filterAvailableStores, setFilterAvailableStores] = useState<string>('all');
+  /** Optional first-row title in exported MAIN-1 (e.g. NOURISHYOU :- ZEPTO). Empty = "WEEKLY REPORT :- CHANNEL". */
+  const [main1ExportTitle, setMain1ExportTitle] = useState<string>('');
 
   const loadDashboard = useCallback(async () => {
     if (startDate && endDate && startDate > endDate) {
@@ -155,6 +159,58 @@ export function MainDashboard() {
     return list;
   }, [productPerformanceList, filterCategory, filterSubcategory, filterProductName, filterAvailableStores]);
 
+  const handleDownloadMainExcel = async () => {
+    if (!data) {
+      addNotification('error', 'No data to export. Load the dashboard first.');
+      return;
+    }
+    const channelLabel = channel ? formatChannelLabel(channel) : 'All channels';
+    const base = `main-dashboard_${startDate}_${endDate}${channel ? `_${channel}` : ''}`;
+    try {
+      let workbookExtras: Awaited<ReturnType<typeof reportsApi.getMainDashboardWorkbookData>> | undefined;
+      try {
+        workbookExtras = await reportsApi.getMainDashboardWorkbookData(
+          tenantId,
+          channel || undefined,
+          startDate,
+          endDate
+        );
+      } catch (wErr) {
+        console.warn('Workbook extra tabs fetch failed', wErr);
+        addNotification(
+          'warning',
+          'Could not load extra tab data (AD-CITY, sales lines, etc.). Download will include MAIN-1 only.'
+        );
+      }
+      await downloadMainDashboardExcel(
+        data,
+        filteredProductPerformance,
+        {
+          startDate,
+          endDate,
+          channelLabel,
+          titleBrand: main1ExportTitle.trim() || undefined,
+        },
+        base,
+        workbookExtras
+      );
+      addNotification('success', 'Excel downloaded (full Weekly Report workbook with MAIN-1 + extra tabs)');
+    } catch (err) {
+      console.error(err);
+      addNotification('error', 'Excel export failed. Try again.');
+    }
+  };
+
+  const handleDownloadMainCsv = () => {
+    if (!data) {
+      addNotification('error', 'No data to export. Load the dashboard first.');
+      return;
+    }
+    const base = `main-dashboard-products_${startDate}_${endDate}${channel ? `_${channel}` : ''}`;
+    downloadMainDashboardProductCsv(filteredProductPerformance, base);
+    addNotification('success', 'CSV download started (MAIN-1 product columns)');
+  };
+
   return (
     <div className="min-h-screen overflow-visible bg-slate-50 dark:bg-slate-900">
       <div className="mx-auto max-w-7xl overflow-visible px-4 py-6 sm:px-6 lg:px-8">
@@ -208,6 +264,34 @@ export function MainDashboard() {
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
               Apply
+            </button>
+            <input
+              type="text"
+              value={main1ExportTitle}
+              onChange={(e) => setMain1ExportTitle(e.target.value)}
+              placeholder="MAIN-1 title (e.g. NOURISHYOU :- ZEPTO)"
+              className="min-w-[200px] max-w-[280px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+              title="Optional: first row of MAIN-1 export. Leave empty for WEEKLY REPORT :- MARKETPLACE."
+            />
+            <button
+              type="button"
+              onClick={handleDownloadMainExcel}
+              disabled={!data || loading}
+              title="Single sheet MAIN-1 — same layout as Weekly Report Excel (DATE, KPI row, Campaign Type, Product Performance, City-Wise Sale)"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Download Excel
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadMainCsv}
+              disabled={!data || loading}
+              title="Overall Product Performance only — MAIN-1 column names & numbers (respects filters)"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <Download className="h-4 w-4" />
+              Download CSV
             </button>
             <button
               onClick={() => setUploadDrawerOpen(true)}
@@ -380,8 +464,8 @@ export function MainDashboard() {
                         <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">GMV</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Stock on Hand</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Quantity Sold</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Week on Week</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Month on Month Gro</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Week on Week Growth</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Month on Month Growth</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">View to Order</th>
                       </tr>
                     </thead>

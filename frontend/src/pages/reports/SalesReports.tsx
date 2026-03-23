@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ShoppingCart, TrendingUp, DollarSign, Package, Upload, PieChart, LineChart as LineChartIcon, BarChart3, Layers, MapPin, Activity } from 'lucide-react';
+import { ShoppingCart, TrendingUp, DollarSign, Package, Upload, PieChart, LineChart as LineChartIcon, BarChart3, Layers, MapPin, Activity, Download, FileSpreadsheet } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
 import { ReportUpload } from '../../components/reports/ReportUpload';
@@ -7,6 +7,7 @@ import { Table, type Column } from '../../components/ui/Table';
 import { Drawer } from '../../components/ui/Drawer';
 import { reportsApi, type SalesReportRow, type SalesSummary } from '../../services/api';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, ComposedChart, Area } from 'recharts';
+import { exportAlignedTable, formatReportDate, formatChannelLabel } from '../../utils/reportExport';
 
 export function SalesReports() {
   const { currentTheme, addNotification } = useAppStore();
@@ -457,23 +458,65 @@ export function SalesReports() {
     },
   ];
 
+  const handleExportSales = (format: 'csv' | 'xlsx') => {
+    if (!allSalesData.length) {
+      addNotification('error', 'No data to export for the current filters');
+      return;
+    }
+    const range = getDateRange();
+    const start = range.start ?? 'all';
+    const end = range.end ?? 'all';
+    const ch = selectedChannel ? `_${selectedChannel}` : '';
+    const base = `sales-report_${start}_${end}${ch}`;
+    const headers = ['Date', 'ITEMNAME', 'Channel', 'Units', 'Revenue', 'DRR', 'Brand'];
+    const dataRows = allSalesData.map((row) => [
+      formatReportDate(row.date),
+      row.item_name || '-',
+      formatChannelLabel(row.channel),
+      row.units,
+      `₹${row.revenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+      row.drr || '-',
+      row.brand || '-',
+    ]);
+    exportAlignedTable(headers, dataRows, base, format, 'Sales');
+    addNotification('success', format === 'csv' ? 'CSV download started' : 'Excel download started');
+  };
+
   return (
     <>
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sales Reports</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Analyze sales performance, revenue, and channel metrics
           </p>
         </div>
-        <button
-          onClick={() => setIsUploadDrawerOpen(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Sales Report
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleExportSales('csv')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExportSales('xlsx')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Download Excel
+          </button>
+          <button
+            onClick={() => setIsUploadDrawerOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Sales Report
+          </button>
+        </div>
       </div>
 
       {/* Filters Section */}

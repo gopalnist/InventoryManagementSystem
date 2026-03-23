@@ -12,6 +12,9 @@ const salesTarget = process.env.VITE_PROXY_SALES_TARGET || 'http://localhost:800
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ['exceljs'],
+  },
   server: {
     port: 3001,
     host: true,
