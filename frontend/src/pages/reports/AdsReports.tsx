@@ -173,13 +173,14 @@ export function AdsReports() {
       className: 'min-w-[200px]',
     },
     {
-      key: 'product_identifier',
-      header: 'Product ID',
+      key: 'product_name',
+      header: 'Product',
       render: (row) => (
-        <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
-          {row.product_identifier || '-'}
+        <div className="text-sm text-gray-900 dark:text-white max-w-xs truncate" title={row.product_name || row.product_identifier || ''}>
+          {row.product_name || row.product_identifier || '-'}
         </div>
       ),
+      className: 'min-w-[180px]',
     },
     {
       key: 'impressions',
@@ -484,16 +485,18 @@ export function AdsReports() {
             {/* Top 10 Products by ROAS */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 10 Products by ROAS</h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <BarChart
                   data={(() => {
                     const productData = allAdsData.reduce((acc: any, row) => {
-                      if (!row.product_identifier) return acc;
-                      if (!acc[row.product_identifier]) {
-                        acc[row.product_identifier] = { product: row.product_identifier.substring(0, 15), spend: 0, sales: 0 };
+                      const key = row.product_identifier || row.product_name;
+                      if (!key) return acc;
+                      if (!acc[key]) {
+                        const label = (row.product_name || row.product_identifier || '').substring(0, 20);
+                        acc[key] = { product: label, spend: 0, sales: 0 };
                       }
-                      acc[row.product_identifier].spend += row.spend;
-                      acc[row.product_identifier].sales += row.sales;
+                      acc[key].spend += row.spend;
+                      acc[key].sales += row.sales;
                       return acc;
                     }, {});
                     return Object.values(productData)
@@ -502,11 +505,11 @@ export function AdsReports() {
                       .slice(0, 10);
                   })()}
                   layout="vertical"
-                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                  margin={{ top: 5, right: 30, left: 140, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
-                  <YAxis dataKey="product" type="category" />
+                  <YAxis dataKey="product" type="category" width={130} tick={{ fontSize: 11 }} interval={0} />
                   <Tooltip formatter={(value: any) => `${value.toFixed(2)}x`} />
                   <Bar dataKey="roas" fill="#8b5cf6" />
                 </BarChart>
@@ -516,15 +519,17 @@ export function AdsReports() {
             {/* Top 10 Products by Sales */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 10 Products by Sales</h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <BarChart
                   data={(() => {
                     const productData = allAdsData.reduce((acc: any, row) => {
-                      if (!row.product_identifier) return acc;
-                      if (!acc[row.product_identifier]) {
-                        acc[row.product_identifier] = { product: row.product_identifier.substring(0, 15), sales: 0 };
+                      const key = row.product_identifier || row.product_name;
+                      if (!key) return acc;
+                      if (!acc[key]) {
+                        const label = (row.product_name || row.product_identifier || '').substring(0, 20);
+                        acc[key] = { product: label, sales: 0 };
                       }
-                      acc[row.product_identifier].sales += row.sales;
+                      acc[key].sales += row.sales;
                       return acc;
                     }, {});
                     return Object.values(productData)
@@ -532,11 +537,11 @@ export function AdsReports() {
                       .slice(0, 10);
                   })()}
                   layout="vertical"
-                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                  margin={{ top: 5, right: 30, left: 140, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
-                  <YAxis dataKey="product" type="category" />
+                  <YAxis dataKey="product" type="category" width={130} tick={{ fontSize: 11 }} interval={0} />
                   <Tooltip formatter={(value: any) => `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} />
                   <Bar dataKey="sales" fill="#10b981" />
                 </BarChart>

@@ -105,6 +105,44 @@ docker compose build report-service frontend
 docker compose up -d
 ```
 
+The **frontend** service uses `frontend/docker-entrypoint-dev.sh`: if `vite` is missing it runs a **clean** `npm ci` (not `npm install`) into the `frontend_node_modules` volume, which avoids common Docker `ENOTEMPTY` / half-installed `node_modules` issues.
+
+If the frontend container still loops or errors, reset the volume once:
+
+```bash
+docker compose down
+docker volume rm inventorymanagementsystem_frontend_node_modules 2>/dev/null || docker volume ls | grep frontend
+docker compose up -d
+```
+
+---
+
+## 5b. Podman (same as Docker)
+
+You can use the **same** `docker-compose.yml` with Podman. Run from the **project root**.
+
+**Option A – Podman built-in Compose (Podman 4.1+):**
+```bash
+cd /path/to/InventoryManagementSystem
+podman compose build report-service frontend
+podman compose up -d
+```
+
+**Option B – podman-compose (if you don’t have `podman compose`):**
+```bash
+pip install podman-compose
+cd /path/to/InventoryManagementSystem
+podman-compose -f docker-compose.yml up -d --build
+```
+
+Same ports apply: frontend **3001**, report-service **8005**, postgres **5433**, postgres-reports **5441**. If you hit permission or network issues (e.g. rootless), try running the stack once with `sudo podman compose up -d` to confirm, then adjust permissions as needed.
+
+**Helper script (from project root):**
+```bash
+./scripts/run-podman.sh up -d --build
+./scripts/run-podman.sh down
+```
+
 ---
 
 ## Running on a different machine

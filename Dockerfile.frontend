@@ -1,11 +1,10 @@
 # Frontend – build from repo root (used by docker-compose)
-# Same as frontend/Dockerfile; kept at root so compose always finds it.
 FROM node:20-alpine
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci && echo "npm ci OK — $(ls node_modules/.bin/vite && echo 'vite found')"
 
 COPY frontend/ .
 

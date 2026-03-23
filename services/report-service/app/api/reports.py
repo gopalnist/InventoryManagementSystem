@@ -1201,6 +1201,17 @@ def _process_ads_report(cur, tenant_id, upload_id, channel, df, mapping, data_ty
                         if product_identifier:
                             break
             
+            # Product Name - try mapping first, then fallbacks
+            product_name = safe_str(row.get(mapping.get('product_name', '')))
+            if not product_name:
+                for alt_col in ['ProductName', 'Product Name', 'product_name', 'PRODUCT_NAME',
+                                'Product', 'Item Name', 'ItemName', 'item_name', 'ITEM_NAME',
+                                'SKU Name', 'sku_name', 'SKU_NAME']:
+                    if alt_col in available_columns:
+                        product_name = safe_str(row.get(alt_col))
+                        if product_name:
+                            break
+            
             # Impressions - try mapping first, then fallbacks
             impressions = safe_int(row.get(mapping.get('impressions', '')))
             if impressions == 0:
@@ -1285,12 +1296,12 @@ def _process_ads_report(cur, tenant_id, upload_id, channel, df, mapping, data_ty
             cur.execute("""
                 INSERT INTO ads_reports (
                     tenant_id, upload_id, channel, report_date, campaign_name,
-                    ad_group, product_identifier, impressions, clicks, spend,
+                    ad_group, product_identifier, product_name, impressions, clicks, spend,
                     sales, roas, acos, city, campaign_type, orders, category, raw_data
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 str(tenant_id), str(upload_id), channel, report_date, campaign_name,
-                ad_group, product_identifier, impressions, clicks, spend,
+                ad_group, product_identifier, product_name or None, impressions, clicks, spend,
                 sales, roas, acos, city_val or None, campaign_type_val or None,
                 orders_val if orders_val is not None else None, category_val or None,
                 json.dumps(raw_data)
@@ -1810,6 +1821,7 @@ async def get_ads_reports(
                 campaign_name,
                 ad_group,
                 product_identifier,
+                product_name,
                 impressions,
                 clicks,
                 spend,
@@ -1848,6 +1860,7 @@ async def get_ads_reports(
                 'campaign_name': row['campaign_name'] or '',
                 'ad_group': row['ad_group'] or '',
                 'product_identifier': row['product_identifier'] or '',
+                'product_name': row.get('product_name') or '',
                 'impressions': int(row['impressions']) if row['impressions'] else 0,
                 'clicks': int(row['clicks']) if row['clicks'] else 0,
                 'spend': float(row['spend']) if row['spend'] else 0,

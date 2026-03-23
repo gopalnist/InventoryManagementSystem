@@ -1,6 +1,7 @@
 # =============================================================================
-# IMPORTANT: Run all "docker compose" commands from the PROJECT ROOT (this directory).
-# Example: docker compose build report-service   or   docker compose up -d
+# IMPORTANT: Run from PROJECT ROOT. Works with Docker and Podman.
+# Docker:  docker compose build report-service frontend && docker compose up -d
+# Podman: podman compose build report-service frontend && podman compose up -d
 # Report/frontend use Dockerfile.report-service and Dockerfile.frontend at project root.
 # =============================================================================
 # PORTS (host -> service)
@@ -49,7 +50,7 @@ services:
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: ams_db
     ports:
-      - "5441:5432"
+      - "5445:5432"
     volumes:
       - postgres_reports_data:/var/lib/postgresql/data
       - ./scripts/setup_reports_db.sql:/docker-entrypoint-initdb.d/01_setup_reports.sql:ro
@@ -113,21 +114,25 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: ims-frontend
-    restart: unless-stopped
+    restart: on-failure:3
     environment:
       VITE_PROXY_REPORTS_TARGET: http://report-service:8005
       VITE_PROXY_MASTER_TARGET: http://master-service:8001
-      VITE_PROXY_INVENTORY_TARGET: http://localhost:8004
-      VITE_PROXY_AMS_TARGET: http://localhost:8003
-      VITE_PROXY_SALES_TARGET: http://localhost:8002
+      VITE_PROXY_INVENTORY_TARGET: http://host.containers.internal:8004
+      VITE_PROXY_AMS_TARGET: http://host.containers.internal:8003
+      VITE_PROXY_SALES_TARGET: http://host.containers.internal:8002
     ports:
       - "3001:3001"
     depends_on:
       - report-service
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev -- --host 0.0.0.0
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
+      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json
 
   # =============================================================================
   # MASTER SERVICE (Products, Parties, etc. - optional profile)

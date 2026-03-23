@@ -2267,6 +2267,7 @@ export interface AdsReportRow {
   campaign_name: string;
   ad_group: string;
   product_identifier: string;
+  product_name: string;
   impressions: number;
   clicks: number;
   spend: number;
