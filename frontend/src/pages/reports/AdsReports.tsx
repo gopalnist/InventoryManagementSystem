@@ -9,10 +9,22 @@ import { reportsApi, type AdsReportRow, type AdsSummary } from '../../services/a
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportAlignedTable, formatReportDate, formatChannelLabel } from '../../utils/reportExport';
 import { AD_SOURCE_OPTIONS } from '../../constants/adSources';
+import {
+  aggregateChannelSpend,
+  aggregateChannelRoas,
+  topProductsByRoas,
+  topProductsBySales,
+  ctrByChannel,
+  cpcByChannel,
+  topCampaignsBySales,
+  conversionRateFromSummary,
+} from '../../utils/adsAnalyticsAggregates';
+import { downloadAdsAnalyticsExcel } from '../../utils/adsAnalyticsExcel';
 
 export function AdsReports() {
   const { currentTheme, addNotification } = useAppStore();
   const tenantId = useAuthStore((s) => s.tenantId)!;
+  const tenantName = useAuthStore((s) => s.tenantName);
   const [dateRange, setDateRange] = useState('30d');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
@@ -22,6 +34,8 @@ export function AdsReports() {
   const [summary, setSummary] = useState<AdsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
+  /** Optional first row of Excel export (Main Dashboard style), e.g. NOURISHYOU :- BIGBASKET */
+  const [adsExportTitle, setAdsExportTitle] = useState<string>('');
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -231,7 +245,7 @@ export function AdsReports() {
     },
   ];
 
-  const handleExportAds = (format: 'csv' | 'xlsx') => {
+  const handleExportAdsCsv = () => {
     if (!allAdsData.length) {
       addNotification('error', 'No data to export for the current filters');
       return;
@@ -261,8 +275,40 @@ export function AdsReports() {
       `₹${row.sales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       `${row.roas.toFixed(2)}x`,
     ]);
-    exportAlignedTable(headers, dataRows, base, format, 'Ads');
-    addNotification('success', format === 'csv' ? 'CSV download started' : 'Excel download started');
+    exportAlignedTable(headers, dataRows, base, 'csv', 'Ads');
+    addNotification('success', 'CSV download started');
+  };
+
+  const handleExportAdsAnalyticsExcel = async () => {
+    if (summary === null && allAdsData.length === 0) {
+      addNotification('error', 'No data to export for the current filters');
+      return;
+    }
+    const { start, end } = getDateRange();
+    const ch = selectedChannel ? `_${selectedChannel}` : '';
+    const base = `ads-analytics_${start}_${end}${ch}`;
+    const periodLabel = `${start} → ${end}`;
+    const adSourceLabel = selectedChannel ? formatChannelLabel(selectedChannel) : 'All sources';
+    const marketplaceUpper = selectedChannel
+      ? formatChannelLabel(selectedChannel).toUpperCase()
+      : 'ALL SOURCES';
+    try {
+      await downloadAdsAnalyticsExcel(allAdsData, summary, {
+        periodLabel,
+        adSourceLabel,
+        marketplaceUpper,
+        filenameBase: base,
+        titleBrand: adsExportTitle.trim() || undefined,
+        tenantDisplayName: tenantName,
+      });
+      addNotification(
+        'success',
+        'Excel downloaded (Ads Analytics + Detail data — matches dashboard sections)'
+      );
+    } catch (e) {
+      console.error(e);
+      addNotification('error', 'Excel export failed. Try again.');
+    }
   };
 
   return (
@@ -276,9 +322,17 @@ export function AdsReports() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={adsExportTitle}
+            onChange={(e) => setAdsExportTitle(e.target.value)}
+            placeholder="Excel title (e.g. NOURISHYOU :- BIGBASKET)"
+            title="Optional: purple header row. Empty = {Tenant name} :- {Ad source}, e.g. NOURISHYOU :- BIGBASKET"
+            className="min-w-[200px] max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
+          />
           <button
             type="button"
-            onClick={() => handleExportAds('csv')}
+            onClick={() => handleExportAdsCsv()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <Download className="h-4 w-4 mr-2" />
@@ -286,11 +340,11 @@ export function AdsReports() {
           </button>
           <button
             type="button"
-            onClick={() => handleExportAds('xlsx')}
+            onClick={() => void handleExportAdsAnalyticsExcel()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Download Excel
+            Download Excel (Analytics)
           </button>
           <button
             onClick={() => setIsUploadDrawerOpen(true)}
@@ -480,13 +534,10 @@ export function AdsReports() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={(() => {
-                      const channelSpend = allAdsData.reduce((acc: any, row) => {
-                        acc[row.channel] = (acc[row.channel] || 0) + row.spend;
-                        return acc;
-                      }, {});
-                      return Object.entries(channelSpend).map(([name, value]) => ({ name, value }));
-                    })()}
+                    data={aggregateChannelSpend(allAdsData).map(({ channel, spend }) => ({
+                      name: formatChannelLabel(channel),
+                      value: spend,
+                    }))}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -509,20 +560,10 @@ export function AdsReports() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">ROAS Distribution by Channel</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
-                  data={(() => {
-                    const channelData = allAdsData.reduce((acc: any, row) => {
-                      if (!acc[row.channel]) {
-                        acc[row.channel] = { channel: row.channel, spend: 0, sales: 0 };
-                      }
-                      acc[row.channel].spend += row.spend;
-                      acc[row.channel].sales += row.sales;
-                      return acc;
-                    }, {});
-                    return Object.values(channelData).map((ch: any) => ({
-                      channel: ch.channel,
-                      roas: ch.spend > 0 ? ch.sales / ch.spend : 0
-                    }));
-                  })()}
+                  data={aggregateChannelRoas(allAdsData).map((ch) => ({
+                    channel: formatChannelLabel(ch.channel),
+                    roas: ch.roas,
+                  }))}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
@@ -542,23 +583,10 @@ export function AdsReports() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 10 Products by ROAS</h3>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart
-                  data={(() => {
-                    const productData = allAdsData.reduce((acc: any, row) => {
-                      const key = row.product_identifier || row.product_name;
-                      if (!key) return acc;
-                      if (!acc[key]) {
-                        const label = (row.product_name || row.product_identifier || '').substring(0, 20);
-                        acc[key] = { product: label, spend: 0, sales: 0 };
-                      }
-                      acc[key].spend += row.spend;
-                      acc[key].sales += row.sales;
-                      return acc;
-                    }, {});
-                    return Object.values(productData)
-                      .map((p: any) => ({ ...p, roas: p.spend > 0 ? p.sales / p.spend : 0 }))
-                      .sort((a: any, b: any) => b.roas - a.roas)
-                      .slice(0, 10);
-                  })()}
+                  data={topProductsByRoas(allAdsData, 10).map((p) => ({
+                    product: p.product,
+                    roas: p.roas,
+                  }))}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 140, bottom: 5 }}
                 >
@@ -576,21 +604,7 @@ export function AdsReports() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 10 Products by Sales</h3>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart
-                  data={(() => {
-                    const productData = allAdsData.reduce((acc: any, row) => {
-                      const key = row.product_identifier || row.product_name;
-                      if (!key) return acc;
-                      if (!acc[key]) {
-                        const label = (row.product_name || row.product_identifier || '').substring(0, 20);
-                        acc[key] = { product: label, sales: 0 };
-                      }
-                      acc[key].sales += row.sales;
-                      return acc;
-                    }, {});
-                    return Object.values(productData)
-                      .sort((a: any, b: any) => b.sales - a.sales)
-                      .slice(0, 10);
-                  })()}
+                  data={topProductsBySales(allAdsData, 10)}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 140, bottom: 5 }}
                 >
@@ -613,28 +627,14 @@ export function AdsReports() {
                 CTR by Channel
               </h3>
               <div className="space-y-3">
-                {(() => {
-                  const channelData = allAdsData.reduce((acc: any, row) => {
-                    if (!acc[row.channel]) {
-                      acc[row.channel] = { impressions: 0, clicks: 0 };
-                    }
-                    acc[row.channel].impressions += row.impressions;
-                    acc[row.channel].clicks += row.clicks;
-                    return acc;
-                  }, {});
-                  return Object.entries(channelData)
-                    .map(([channel, data]: [string, any]) => ({
-                      channel,
-                      ctr: data.impressions > 0 ? (data.clicks / data.impressions) * 100 : 0
-                    }))
-                    .sort((a, b) => b.ctr - a.ctr)
-                    .map((item) => (
-                      <div key={item.channel} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">{item.channel}</span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{item.ctr.toFixed(2)}%</span>
-                      </div>
-                    ));
-                })()}
+                {ctrByChannel(allAdsData).map((item) => (
+                  <div key={item.channel} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                      {formatChannelLabel(item.channel)}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{item.ctr.toFixed(2)}%</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -645,28 +645,14 @@ export function AdsReports() {
                 Cost per Click (CPC)
               </h3>
               <div className="space-y-3">
-                {(() => {
-                  const channelData = allAdsData.reduce((acc: any, row) => {
-                    if (!acc[row.channel]) {
-                      acc[row.channel] = { spend: 0, clicks: 0 };
-                    }
-                    acc[row.channel].spend += row.spend;
-                    acc[row.channel].clicks += row.clicks;
-                    return acc;
-                  }, {});
-                  return Object.entries(channelData)
-                    .map(([channel, data]: [string, any]) => ({
-                      channel,
-                      cpc: data.clicks > 0 ? data.spend / data.clicks : 0
-                    }))
-                    .sort((a, b) => a.cpc - b.cpc)
-                    .map((item) => (
-                      <div key={item.channel} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">{item.channel}</span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">₹{item.cpc.toFixed(2)}</span>
-                      </div>
-                    ));
-                })()}
+                {cpcByChannel(allAdsData).map((item) => (
+                  <div key={item.channel} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                      {formatChannelLabel(item.channel)}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">₹{item.cpc.toFixed(2)}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -698,7 +684,7 @@ export function AdsReports() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Conversion Rate</span>
                   <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {summary && summary.total_clicks > 0 ? ((summary.total_sales / summary.total_clicks) * 100).toFixed(2) : '0.00'}%
+                    {summary ? conversionRateFromSummary(summary).toFixed(2) : '0.00'}%
                   </span>
                 </div>
               </div>
@@ -707,21 +693,7 @@ export function AdsReports() {
 
           {/* Row 4: Campaign Performance (if campaigns exist) */}
           {(() => {
-            const campaignData = allAdsData.filter(row => row.campaign_name).reduce((acc: any, row) => {
-              if (!acc[row.campaign_name]) {
-                acc[row.campaign_name] = { campaign: row.campaign_name, spend: 0, sales: 0, impressions: 0, clicks: 0 };
-              }
-              acc[row.campaign_name].spend += row.spend;
-              acc[row.campaign_name].sales += row.sales;
-              acc[row.campaign_name].impressions += row.impressions;
-              acc[row.campaign_name].clicks += row.clicks;
-              return acc;
-            }, {});
-            const campaigns = Object.values(campaignData).map((c: any) => ({
-              ...c,
-              roas: c.spend > 0 ? c.sales / c.spend : 0,
-              ctr: c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0
-            })).sort((a: any, b: any) => b.sales - a.sales).slice(0, 10);
+            const campaigns = topCampaignsBySales(allAdsData, 10);
 
             return campaigns.length > 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">

@@ -11,10 +11,12 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
 import { exportAlignedTable, formatReportDate, formatChannelLabel } from '../../utils/reportExport';
+import { downloadStyledAlignedReportExcel } from '../../utils/reportStyledExcelExport';
 
 export function POReports() {
   const { currentTheme, addNotification } = useAppStore();
   const tenantId = useAuthStore((s) => s.tenantId)!;
+  const tenantName = useAuthStore((s) => s.tenantName);
   const [dateRange, setDateRange] = useState('30d');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
@@ -24,6 +26,7 @@ export function POReports() {
   const [summary, setSummary] = useState<POSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
+  const [poExportTitle, setPoExportTitle] = useState<string>('');
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -392,11 +395,7 @@ export function POReports() {
     },
   ];
 
-  const handleExportPO = (format: 'csv' | 'xlsx') => {
-    if (!allPOData.length) {
-      addNotification('error', 'No data to export for the current filters');
-      return;
-    }
+  const buildPOExportPayload = () => {
     const { start, end } = getDateRange();
     const ch = selectedChannel ? `_${selectedChannel}` : '';
     const base = `po-report_${start}_${end}${ch}`;
@@ -420,8 +419,46 @@ export function POReports() {
       row.sku_id || '-',
       row.units,
     ]);
-    exportAlignedTable(headers, dataRows, base, format, 'PO');
-    addNotification('success', format === 'csv' ? 'CSV download started' : 'Excel download started');
+    const periodLabel = `${start} → ${end}`;
+    const marketplaceUpper = selectedChannel
+      ? formatChannelLabel(selectedChannel).toUpperCase()
+      : 'ALL CHANNELS';
+    return { base, headers, dataRows, periodLabel, marketplaceUpper };
+  };
+
+  const handleExportPOCsv = () => {
+    if (!allPOData.length) {
+      addNotification('error', 'No data to export for the current filters');
+      return;
+    }
+    const { base, headers, dataRows } = buildPOExportPayload();
+    exportAlignedTable(headers, dataRows, base, 'csv', 'PO');
+    addNotification('success', 'CSV download started');
+  };
+
+  const handleExportPOExcel = async () => {
+    if (!allPOData.length) {
+      addNotification('error', 'No data to export for the current filters');
+      return;
+    }
+    const { base, headers, dataRows, periodLabel, marketplaceUpper } = buildPOExportPayload();
+    try {
+      await downloadStyledAlignedReportExcel({
+        headers,
+        dataRows,
+        filenameBase: base,
+        sheetName: 'PO',
+        periodLabel,
+        marketplaceUpper,
+        titleBrand: poExportTitle.trim() || undefined,
+        tenantDisplayName: tenantName,
+        fallbackPrefix: 'PO REPORT',
+      });
+      addNotification('success', 'Excel downloaded (Main Dashboard–style header)');
+    } catch (e) {
+      console.error(e);
+      addNotification('error', 'Excel export failed. Try again.');
+    }
   };
 
   return (
@@ -435,9 +472,17 @@ export function POReports() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={poExportTitle}
+            onChange={(e) => setPoExportTitle(e.target.value)}
+            placeholder="Excel title (e.g. NOURISHYOU :- BIGBASKET)"
+            title="Optional purple header. Empty = {Tenant} :- {Channel}"
+            className="min-w-[200px] max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
+          />
           <button
             type="button"
-            onClick={() => handleExportPO('csv')}
+            onClick={() => handleExportPOCsv()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <Download className="h-4 w-4 mr-2" />
@@ -445,7 +490,7 @@ export function POReports() {
           </button>
           <button
             type="button"
-            onClick={() => handleExportPO('xlsx')}
+            onClick={() => void handleExportPOExcel()}
             className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
