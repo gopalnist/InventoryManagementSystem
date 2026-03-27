@@ -3,17 +3,21 @@
 # Docker:  docker compose build report-service frontend && docker compose up -d
 # Podman: podman compose build report-service frontend && podman compose up -d
 # Report/frontend use Dockerfile.report-service and Dockerfile.frontend at project root.
+#
+# If code changes do not show: rebuild then up (bind mounts + --reload need a fresh build sometimes):
+#   docker compose build --no-cache report-service frontend && docker compose up -d
+#   podman compose build --no-cache report-service frontend && podman compose up -d
+#
+# Pre-built images for Linux: LINUX_PODMAN_BUNDLE.md (tarball includes docker-compose.podman-linux.yaml).
 # =============================================================================
 # PORTS (host -> service)
 # =============================================================================
-#   5432  -> postgres (ims_db)
-#   5441  -> postgres-reports (ams_db)
-#   5050  -> pgadmin (profile: tools)
+#   5433  -> postgres (ims_db)
+#   5445  -> postgres-reports (ams_db)
+#   5150  -> pgadmin (profile: tools)
 #   8001  -> master-service (profile: services)
 #   8005  -> report-service (Reports / Main Dashboard API)
 #   3001  -> frontend (UI)
-# =============================================================================
-# (version is obsolete in Compose V2 and has been removed)
 # =============================================================================
 
 services:

@@ -28,7 +28,7 @@ Set env vars for the report service (or use a `.env` in project root):
 
 ```bash
 export DB_HOST=localhost
-export DB_PORT=5441
+export DB_PORT=5445
 export DB_NAME=ams_db
 export DB_USER=postgres
 export DB_PASSWORD=mypassword
@@ -45,7 +45,7 @@ cd /path/to/InventoryManagementSystem
 export PYTHONPATH="${PWD}"
 
 # Optional: set DB env if not using .env
-export DB_HOST=localhost DB_PORT=5441 DB_NAME=ams_db DB_USER=postgres DB_PASSWORD=mypassword
+export DB_HOST=localhost DB_PORT=5445 DB_NAME=ams_db DB_USER=postgres DB_PASSWORD=mypassword
 
 python -m uvicorn services.report-service.app.main:app --host 0.0.0.0 --port 8005 --reload
 ```
@@ -135,7 +135,7 @@ cd /path/to/InventoryManagementSystem
 podman-compose -f docker-compose.yml up -d --build
 ```
 
-Same ports apply: frontend **3001**, report-service **8005**, postgres **5433**, postgres-reports **5441**. If you hit permission or network issues (e.g. rootless), try running the stack once with `sudo podman compose up -d` to confirm, then adjust permissions as needed.
+Same ports apply: frontend **3001**, report-service **8005**, postgres **5433**, postgres-reports **5445**. If you hit permission or network issues (e.g. rootless), try running the stack once with `sudo podman compose up -d` to confirm, then adjust permissions as needed.
 
 **Helper script (from project root):**
 ```bash
@@ -166,6 +166,14 @@ Same ports apply: frontend **3001**, report-service **8005**, postgres **5433**,
    - `Dockerfile.report-service`
    - `Dockerfile.frontend`
    If they are missing, pull the latest changes or copy them from the repo.
+
+5. **If the app still looks old after `git pull`** – your containers may be using cached images or an old compose file. From the project root:
+   ```bash
+   docker compose down
+   docker compose build --no-cache report-service frontend
+   docker compose up -d
+   ```
+   (Same with Podman: `podman compose` instead of `docker compose`.)
 
 ---
 

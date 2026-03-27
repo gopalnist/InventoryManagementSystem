@@ -142,3 +142,6 @@ dmypy.json
 *.pid
 *.sock
 
+# Podman/Linux image bundle (large; regenerate with scripts/build-linux-podman-bundle.sh)
+ims-linux-podman-bundle-*.tar.gz
+ims-deploy-bundle*.tar.gz
