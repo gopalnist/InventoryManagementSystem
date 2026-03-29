@@ -4,10 +4,12 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci && echo "npm ci OK — $(ls node_modules/.bin/vite && echo 'vite found')"
+RUN npm ci
 
 COPY frontend/ .
 
+ENV PATH="/app/node_modules/.bin:$PATH"
+
 EXPOSE 3001
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npx", "vite", "--host", "0.0.0.0"]
