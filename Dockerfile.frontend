@@ -3,13 +3,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-
 COPY frontend/ .
-
-ENV PATH="/app/node_modules/.bin:$PATH"
+RUN npm ci
 
 EXPOSE 3001
 
-CMD ["npx", "vite", "--host", "0.0.0.0"]
+CMD ["./node_modules/.bin/vite", "--host", "0.0.0.0"]
