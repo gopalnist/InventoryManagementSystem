@@ -1,0 +1,118 @@
+# =============================================================================
+# PRODUCTION COMPOSE — pulls pre-built images from GitHub Container Registry.
+#
+# Works on ANY machine (Linux, cloud VM, etc.):
+#   1. Copy this file + scripts/setup_reports_db.sql to the machine
+#   2. docker login ghcr.io -u <github-username>
+#   3. docker compose -f docker-compose.prod.yml pull
+#   4. docker compose -f docker-compose.prod.yml up -d
+#
+# To update to latest version:
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+# =============================================================================
+# PORTS: 5433 (postgres), 5445 (postgres-reports), 8005 (report-service),
+#        3001 (frontend), 8001 (master-service, optional)
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # DATABASES
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: ims-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ims_user
+      POSTGRES_PASSWORD: ims_password
+      POSTGRES_DB: ims_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ims_user -d ims_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-reports:
+    image: postgres:16-alpine
+    container_name: ims-postgres-reports
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: ams_db
+    ports:
+      - "5445:5432"
+    volumes:
+      - postgres_reports_data:/var/lib/postgresql/data
+      - ./scripts/setup_reports_db.sql:/docker-entrypoint-initdb.d/01_setup_reports.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ams_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # REPORT SERVICE — pulled from GHCR
+  # ---------------------------------------------------------------------------
+  report-service:
+    image: ghcr.io/gopalnist/ims-report-service:latest
+    container_name: ims-report-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres-reports
+      DB_PORT: 5432
+      DB_NAME: ams_db
+      DB_USER: postgres
+      DB_PASSWORD: mypassword
+      SERVICE_PORT: 8005
+      DEBUG: "true"
+    ports:
+      - "8005:8005"
+    depends_on:
+      postgres-reports:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND — pulled from GHCR
+  # ---------------------------------------------------------------------------
+  frontend:
+    image: ghcr.io/gopalnist/ims-frontend:latest
+    container_name: ims-frontend
+    restart: on-failure:3
+    environment:
+      VITE_PROXY_REPORTS_TARGET: http://report-service:8005
+      VITE_PROXY_MASTER_TARGET: http://master-service:8001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - report-service
+
+  # ---------------------------------------------------------------------------
+  # WATCHTOWER — auto-pulls new images and restarts containers
+  # ---------------------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower
+    container_name: ims-watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: 120
+      WATCHTOWER_LABEL_ENABLE: "false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $HOME/.docker/config.json:/config.json:ro
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_reports_data:
+    driver: local
+
+networks:
+  default:
+    name: ims-network

@@ -1,0 +1,71 @@
+name: Build & Push IMS Images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ims-frontend
+  REPORT_SERVICE_IMAGE: ghcr.io/${{ github.repository_owner }}/ims-report-service
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "sha_tag=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "date_tag=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.tag.outputs.sha_tag }}
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.tag.outputs.date_tag }}
+
+      - name: Build & push report-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.report-service
+          push: true
+          tags: |
+            ${{ env.REPORT_SERVICE_IMAGE }}:latest
+            ${{ env.REPORT_SERVICE_IMAGE }}:${{ steps.tag.outputs.sha_tag }}
+            ${{ env.REPORT_SERVICE_IMAGE }}:${{ steps.tag.outputs.date_tag }}
+
+      - name: Print deployed image tags
+        run: |
+          echo "============================================="
+          echo "  Images pushed to GHCR"
+          echo "============================================="
+          echo "  Frontend:       ${{ env.FRONTEND_IMAGE }}:${{ steps.tag.outputs.sha_tag }}"
+          echo "  Report Service: ${{ env.REPORT_SERVICE_IMAGE }}:${{ steps.tag.outputs.sha_tag }}"
+          echo ""
+          echo "  On any machine, deploy with:"
+          echo "    docker compose -f docker-compose.prod.yml pull"
+          echo "    docker compose -f docker-compose.prod.yml up -d"
+          echo "============================================="

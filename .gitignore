@@ -3,44 +3,27 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.egg
+*.egg-info/
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 venv/
+.venv/
 env/
 ENV/
-.venv
+*.whl
 pip-log.txt
-pip-delete-this-directory.txt
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
 .tox/
-.hypothesis/
 
 # Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-.pnpm-debug.log*
-dist/
 dist-ssr/
 *.local
 
@@ -50,98 +33,36 @@ dist-ssr/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
 
 # Logs
-logs/
 *.log
-/tmp/
-*.log.*
+logs/
 
-# Environment variables
+# Environment
 .env
-.env.local
-.env.*.local
-*.env
+.env.*
 
-# Database
+# Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Jupyter
+.ipynb_checkpoints/
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.swp
-*~
-
-# Test data (optional - uncomment if you don't want to commit test data)
-# test_data/
-
-# Build artifacts
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
-*.so
-*.egg
-*.egg-info/
-
-# Coverage reports
-.coverage
-htmlcov/
-.pytest_cache/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# Project specific
-/tmp/
-*.pid
-*.sock
-
-# Podman/Linux image bundle (large; regenerate with scripts/build-linux-podman-bundle.sh)
-ims-linux-podman-bundle-*.tar.gz
+# Deploy bundle (no longer needed — CI/CD pushes images to GHCR)
 ims-deploy-bundle*.tar.gz
+ims-deploy-bundle/
+ims-linux-podman-bundle-*.tar.gz
+ims-images*.tar
+
+# Backup files
+*.bak
+
+# Data files in root (keep them in test_data/ or excelsheet/)
+/*.xlsx
+/*.csv
